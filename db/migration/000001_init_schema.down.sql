@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS budget;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS users;
