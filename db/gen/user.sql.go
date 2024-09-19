@@ -3,7 +3,7 @@
 //   sqlc v1.27.0
 // source: user.sql
 
-package gen
+package db
 
 import (
 	"context"
@@ -47,13 +47,23 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
-const getUser = `-- name: GetUser :one
-SELECT id, username, email, password, created_at, currency FROM users
-WHERE id = $1 LIMIT 1
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM users 
+WHERE id = $1
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
-	row := q.db.QueryRow(ctx, getUser, id)
+func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteUser, id)
+	return err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, username, email, password, created_at, currency FROM users 
+WHERE id = $1
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -66,41 +76,56 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 	return i, err
 }
 
-const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, password, created_at, currency FROM users
-ORDER BY id
-LIMIT $1
-OFFSET $2
+const getUserByUsername = `-- name: GetUserByUsername :one
+SELECT id, username, email, password, created_at, currency FROM users 
+WHERE username = $1
 `
 
-type ListUsersParams struct {
-	Limit  int32
-	Offset int32
+func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByUsername, username)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Password,
+		&i.CreatedAt,
+		&i.Currency,
+	)
+	return i, err
 }
 
-func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
-	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []User
-	for rows.Next() {
-		var i User
-		if err := rows.Scan(
-			&i.ID,
-			&i.Username,
-			&i.Email,
-			&i.Password,
-			&i.CreatedAt,
-			&i.Currency,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+const updateUser = `-- name: UpdateUser :one
+UPDATE users 
+SET username = $2, email = $3, password = $4, currency = $5 
+WHERE id = $1
+RETURNING id, username, email, password, created_at, currency
+`
+
+type UpdateUserParams struct {
+	ID       int64
+	Username string
+	Email    string
+	Password string
+	Currency string
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.ID,
+		arg.Username,
+		arg.Email,
+		arg.Password,
+		arg.Currency,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Password,
+		&i.CreatedAt,
+		&i.Currency,
+	)
+	return i, err
 }
