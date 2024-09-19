@@ -1,4 +1,4 @@
-.PHONY: createdb dropdb postgres migrateup migratedown dockerstart dockerstop sqlc
+.PHONY: createdb dropdb postgres migrateup migratedown dockerstart dockerstop sqlc test
 
 createdb:
 	docker exec -it postgres16 createdb --username=root --owner=root financial_helper
@@ -23,3 +23,6 @@ dockerstop:
 
 sqlc:
 	sqlc generate
+
+test:
+	go test -v -cover ./...

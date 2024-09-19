@@ -9,12 +9,20 @@ INSERT INTO users (
 )
 RETURNING *;
 
--- name: GetUser :one
-SELECT * FROM users
-WHERE id = $1 LIMIT 1;
+-- name: GetUserByID :one
+SELECT * FROM users 
+WHERE id = $1;
 
--- name: ListUsers :many
-SELECT * FROM users
-ORDER BY id
-LIMIT $1
-OFFSET $2;
+-- name: GetUserByUsername :one
+SELECT * FROM users 
+WHERE username = $1;
+
+-- name: UpdateUser :one
+UPDATE users 
+SET username = $2, email = $3, password = $4, currency = $5 
+WHERE id = $1
+RETURNING *;
+
+-- name: DeleteUser :exec
+DELETE FROM users 
+WHERE id = $1;
