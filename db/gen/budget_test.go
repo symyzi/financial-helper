@@ -50,7 +50,7 @@ func TestGetBudgetByID(t *testing.T) {
 	require.Equal(t, budget1.UserID, budget2.UserID)
 	require.Equal(t, budget1.CategoryID, budget2.CategoryID)
 	require.Equal(t, budget1.Amount, budget2.Amount)
-	require.WithinDuration(t, budget1.CreatedAt.Time, budget2.CreatedAt.Time, time.Second)
+	require.WithinDuration(t, budget1.CreatedAt, budget2.CreatedAt, time.Second)
 }
 
 func TestGetBudgetByCategoryID(t *testing.T) {
@@ -65,7 +65,7 @@ func TestGetBudgetByCategoryID(t *testing.T) {
 	require.Equal(t, budget1.UserID, budget2.UserID)
 	require.Equal(t, budget1.CategoryID, budget2.CategoryID)
 	require.Equal(t, budget1.Amount, budget2.Amount)
-	require.WithinDuration(t, budget1.CreatedAt.Time, budget2.CreatedAt.Time, time.Second)
+	require.WithinDuration(t, budget1.CreatedAt, budget2.CreatedAt, time.Second)
 }
 
 func TestGetBudgetsByUserID(t *testing.T) {
@@ -104,7 +104,7 @@ func TestUpdateBudget(t *testing.T) {
 	require.Equal(t, budget1.UserID, budget2.UserID)
 	require.Equal(t, budget1.CategoryID, budget2.CategoryID)
 	require.Equal(t, arg.Amount, budget2.Amount)
-	require.WithinDuration(t, budget1.CreatedAt.Time, budget2.CreatedAt.Time, time.Second)
+	require.WithinDuration(t, budget1.CreatedAt, budget2.CreatedAt, time.Second)
 }
 
 func TestDeleteBudget(t *testing.T) {
@@ -117,4 +117,39 @@ func TestDeleteBudget(t *testing.T) {
 	require.Error(t, err)
 	require.Empty(t, budget2)
 	require.True(t, errors.Is(err, sql.ErrNoRows))
+}
+
+func TestUpdateBudgetAmount(t *testing.T) {
+	user := CreateRandomUser(t)
+	category := CreateRandomCategory(t)
+	budget1 := CreateRandomBudget(t, user, category)
+
+	arg := UpdateBudgetParams{
+		ID:         budget1.ID,
+		CategoryID: budget1.CategoryID,
+		Amount:     budget1.Amount + 100,
+	}
+
+	budget2, err := testQueries.UpdateBudget(context.Background(), arg)
+	require.NoError(t, err)
+	require.NotEmpty(t, budget2)
+	require.Equal(t, arg.Amount, budget2.Amount)
+}
+
+func TestUpdateBudgetCategory(t *testing.T) {
+	user := CreateRandomUser(t)
+	category1 := CreateRandomCategory(t)
+	category2 := CreateRandomCategory(t)
+	budget1 := CreateRandomBudget(t, user, category1)
+
+	arg := UpdateBudgetParams{
+		ID:         budget1.ID,
+		CategoryID: category2.ID,
+		Amount:     budget1.Amount,
+	}
+
+	budget2, err := testQueries.UpdateBudget(context.Background(), arg)
+	require.NoError(t, err)
+	require.NotEmpty(t, budget2)
+	require.Equal(t, arg.CategoryID, budget2.CategoryID)
 }

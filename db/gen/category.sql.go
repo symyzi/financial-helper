@@ -19,7 +19,7 @@ RETURNING id, name, created_at
 `
 
 func (q *Queries) CreateCategory(ctx context.Context, name string) (Category, error) {
-	row := q.db.QueryRow(ctx, createCategory, name)
+	row := q.queryRow(ctx, q.createCategoryStmt, createCategory, name)
 	var i Category
 	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
 	return i, err
@@ -31,7 +31,7 @@ WHERE id = $1
 `
 
 func (q *Queries) DeleteCategory(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, deleteCategory, id)
+	_, err := q.exec(ctx, q.deleteCategoryStmt, deleteCategory, id)
 	return err
 }
 
@@ -40,7 +40,7 @@ SELECT id, name, created_at FROM categories
 `
 
 func (q *Queries) GetAllCategories(ctx context.Context) ([]Category, error) {
-	rows, err := q.db.Query(ctx, getAllCategories)
+	rows, err := q.query(ctx, q.getAllCategoriesStmt, getAllCategories)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +52,9 @@ func (q *Queries) GetAllCategories(ctx context.Context) ([]Category, error) {
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -65,7 +68,7 @@ WHERE id = $1
 `
 
 func (q *Queries) GetCategoryByID(ctx context.Context, id int64) (Category, error) {
-	row := q.db.QueryRow(ctx, getCategoryByID, id)
+	row := q.queryRow(ctx, q.getCategoryByIDStmt, getCategoryByID, id)
 	var i Category
 	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
 	return i, err
@@ -79,12 +82,12 @@ RETURNING id, name, created_at
 `
 
 type UpdateCategoryParams struct {
-	ID   int64
-	Name string
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
-	row := q.db.QueryRow(ctx, updateCategory, arg.ID, arg.Name)
+	row := q.queryRow(ctx, q.updateCategoryStmt, updateCategory, arg.ID, arg.Name)
 	var i Category
 	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
 	return i, err

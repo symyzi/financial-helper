@@ -21,13 +21,13 @@ RETURNING id, user_id, amount, category_id, created_at
 `
 
 type CreateBudgetParams struct {
-	UserID     int64
-	CategoryID int64
-	Amount     int64
+	UserID     int64 `json:"user_id"`
+	CategoryID int64 `json:"category_id"`
+	Amount     int64 `json:"amount"`
 }
 
 func (q *Queries) CreateBudget(ctx context.Context, arg CreateBudgetParams) (Budget, error) {
-	row := q.db.QueryRow(ctx, createBudget, arg.UserID, arg.CategoryID, arg.Amount)
+	row := q.queryRow(ctx, q.createBudgetStmt, createBudget, arg.UserID, arg.CategoryID, arg.Amount)
 	var i Budget
 	err := row.Scan(
 		&i.ID,
@@ -45,7 +45,7 @@ WHERE id = $1
 `
 
 func (q *Queries) DeleteBudget(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, deleteBudget, id)
+	_, err := q.exec(ctx, q.deleteBudgetStmt, deleteBudget, id)
 	return err
 }
 
@@ -55,7 +55,7 @@ WHERE category_id = $1
 `
 
 func (q *Queries) GetBudgetByCategoryID(ctx context.Context, categoryID int64) (Budget, error) {
-	row := q.db.QueryRow(ctx, getBudgetByCategoryID, categoryID)
+	row := q.queryRow(ctx, q.getBudgetByCategoryIDStmt, getBudgetByCategoryID, categoryID)
 	var i Budget
 	err := row.Scan(
 		&i.ID,
@@ -73,7 +73,7 @@ WHERE id = $1
 `
 
 func (q *Queries) GetBudgetByID(ctx context.Context, id int64) (Budget, error) {
-	row := q.db.QueryRow(ctx, getBudgetByID, id)
+	row := q.queryRow(ctx, q.getBudgetByIDStmt, getBudgetByID, id)
 	var i Budget
 	err := row.Scan(
 		&i.ID,
@@ -92,7 +92,7 @@ ORDER BY created_at DESC
 `
 
 func (q *Queries) GetBudgetsByUserID(ctx context.Context, userID int64) ([]Budget, error) {
-	rows, err := q.db.Query(ctx, getBudgetsByUserID, userID)
+	rows, err := q.query(ctx, q.getBudgetsByUserIDStmt, getBudgetsByUserID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -111,6 +111,9 @@ func (q *Queries) GetBudgetsByUserID(ctx context.Context, userID int64) ([]Budge
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -125,13 +128,13 @@ RETURNING id, user_id, amount, category_id, created_at
 `
 
 type UpdateBudgetParams struct {
-	ID         int64
-	Amount     int64
-	CategoryID int64
+	ID         int64 `json:"id"`
+	Amount     int64 `json:"amount"`
+	CategoryID int64 `json:"category_id"`
 }
 
 func (q *Queries) UpdateBudget(ctx context.Context, arg UpdateBudgetParams) (Budget, error) {
-	row := q.db.QueryRow(ctx, updateBudget, arg.ID, arg.Amount, arg.CategoryID)
+	row := q.queryRow(ctx, q.updateBudgetStmt, updateBudget, arg.ID, arg.Amount, arg.CategoryID)
 	var i Budget
 	err := row.Scan(
 		&i.ID,
