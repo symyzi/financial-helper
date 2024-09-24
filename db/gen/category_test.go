@@ -33,7 +33,7 @@ func TestGetCategoryByID(t *testing.T) {
 	require.NotEmpty(t, category2)
 	require.Equal(t, category1.ID, category2.ID)
 	require.Equal(t, category1.Name, category2.Name)
-	require.WithinDuration(t, category1.CreatedAt.Time, category2.CreatedAt.Time, time.Second)
+	require.WithinDuration(t, category1.CreatedAt, category2.CreatedAt, time.Second)
 }
 
 func TestGetAllCategories(t *testing.T) {
@@ -61,7 +61,7 @@ func TestUpdateCategory(t *testing.T) {
 	require.NotEmpty(t, category2)
 	require.Equal(t, category1.ID, category2.ID)
 	require.Equal(t, arg.Name, category2.Name)
-	require.WithinDuration(t, category1.CreatedAt.Time, category2.CreatedAt.Time, time.Second)
+	require.WithinDuration(t, category1.CreatedAt, category2.CreatedAt, time.Second)
 }
 
 func TestDeleteCategory(t *testing.T) {
@@ -72,4 +72,16 @@ func TestDeleteCategory(t *testing.T) {
 	require.Error(t, err)
 	require.Empty(t, category2)
 	require.True(t, errors.Is(err, sql.ErrNoRows))
+}
+
+func TestCreateCategoryUniqueness(t *testing.T) {
+	// Create two categories with the same name
+	categoryName := "Test Category" + util.RandomString(6)
+	category1, err := testQueries.CreateCategory(context.Background(), categoryName)
+	require.NoError(t, err)
+	require.NotEmpty(t, category1)
+
+	category2, err := testQueries.CreateCategory(context.Background(), categoryName)
+	require.Error(t, err) // Expecting an error due to unique constraint violation
+	require.Empty(t, category2)
 }

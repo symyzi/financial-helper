@@ -7,8 +7,8 @@ package db
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
+	"time"
 )
 
 const createTransaction = `-- name: CreateTransaction :one
@@ -25,15 +25,15 @@ RETURNING id, user_id, amount, description, category_id, transaction_date, creat
 `
 
 type CreateTransactionParams struct {
-	UserID          int64
-	Amount          int64
-	Description     pgtype.Text
-	CategoryID      int64
-	TransactionDate pgtype.Date
+	UserID          int64          `json:"user_id"`
+	Amount          int64          `json:"amount"`
+	Description     sql.NullString `json:"description"`
+	CategoryID      int64          `json:"category_id"`
+	TransactionDate time.Time      `json:"transaction_date"`
 }
 
 func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error) {
-	row := q.db.QueryRow(ctx, createTransaction,
+	row := q.queryRow(ctx, q.createTransactionStmt, createTransaction,
 		arg.UserID,
 		arg.Amount,
 		arg.Description,
@@ -59,12 +59,12 @@ WHERE id = $1
 `
 
 func (q *Queries) DeleteTransaction(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, deleteTransaction, id)
+	_, err := q.exec(ctx, q.deleteTransactionStmt, deleteTransaction, id)
 	return err
 }
 
 const getMonthlyTransactionStatistics = `-- name: GetMonthlyTransactionStatistics :many
-SELECT DATE_TRUNC('month', transaction_date) AS month, 
+SELECT DATE_TRUNC('month', transaction_date) AT TIME ZONE 'UTC' AS month, 
        SUM(amount) AS total_amount 
 FROM transactions 
 WHERE user_id = $1 
@@ -73,12 +73,12 @@ ORDER BY month DESC
 `
 
 type GetMonthlyTransactionStatisticsRow struct {
-	Month       pgtype.Interval
-	TotalAmount int64
+	Month       interface{} `json:"month"`
+	TotalAmount int64       `json:"total_amount"`
 }
 
 func (q *Queries) GetMonthlyTransactionStatistics(ctx context.Context, userID int64) ([]GetMonthlyTransactionStatisticsRow, error) {
-	rows, err := q.db.Query(ctx, getMonthlyTransactionStatistics, userID)
+	rows, err := q.query(ctx, q.getMonthlyTransactionStatisticsStmt, getMonthlyTransactionStatistics, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +90,9 @@ func (q *Queries) GetMonthlyTransactionStatistics(ctx context.Context, userID in
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -105,18 +108,18 @@ GROUP BY category_id
 `
 
 type GetTotalAmountByCategoryAndDateRangeParams struct {
-	UserID            int64
-	TransactionDate   pgtype.Date
-	TransactionDate_2 pgtype.Date
+	UserID            int64     `json:"user_id"`
+	TransactionDate   time.Time `json:"transaction_date"`
+	TransactionDate_2 time.Time `json:"transaction_date_2"`
 }
 
 type GetTotalAmountByCategoryAndDateRangeRow struct {
-	CategoryID  int64
-	TotalAmount int64
+	CategoryID  int64 `json:"category_id"`
+	TotalAmount int64 `json:"total_amount"`
 }
 
 func (q *Queries) GetTotalAmountByCategoryAndDateRange(ctx context.Context, arg GetTotalAmountByCategoryAndDateRangeParams) ([]GetTotalAmountByCategoryAndDateRangeRow, error) {
-	rows, err := q.db.Query(ctx, getTotalAmountByCategoryAndDateRange, arg.UserID, arg.TransactionDate, arg.TransactionDate_2)
+	rows, err := q.query(ctx, q.getTotalAmountByCategoryAndDateRangeStmt, getTotalAmountByCategoryAndDateRange, arg.UserID, arg.TransactionDate, arg.TransactionDate_2)
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +131,9 @@ func (q *Queries) GetTotalAmountByCategoryAndDateRange(ctx context.Context, arg 
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -142,7 +148,7 @@ WHERE user_id = $1
 `
 
 func (q *Queries) GetTotalTransactionAmountByUserID(ctx context.Context, userID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, getTotalTransactionAmountByUserID, userID)
+	row := q.queryRow(ctx, q.getTotalTransactionAmountByUserIDStmt, getTotalTransactionAmountByUserID, userID)
 	var sum int64
 	err := row.Scan(&sum)
 	return sum, err
@@ -154,7 +160,7 @@ WHERE id = $1
 `
 
 func (q *Queries) GetTransactionByID(ctx context.Context, id int64) (Transaction, error) {
-	row := q.db.QueryRow(ctx, getTransactionByID, id)
+	row := q.queryRow(ctx, q.getTransactionByIDStmt, getTransactionByID, id)
 	var i Transaction
 	err := row.Scan(
 		&i.ID,
@@ -176,16 +182,16 @@ ORDER BY transaction_date DESC
 `
 
 type GetTransactionsByCategoryIDRow struct {
-	ID              int64
-	UserID          int64
-	Amount          int64
-	Description     pgtype.Text
-	TransactionDate pgtype.Date
-	CreatedAt       pgtype.Timestamptz
+	ID              int64          `json:"id"`
+	UserID          int64          `json:"user_id"`
+	Amount          int64          `json:"amount"`
+	Description     sql.NullString `json:"description"`
+	TransactionDate time.Time      `json:"transaction_date"`
+	CreatedAt       time.Time      `json:"created_at"`
 }
 
 func (q *Queries) GetTransactionsByCategoryID(ctx context.Context, categoryID int64) ([]GetTransactionsByCategoryIDRow, error) {
-	rows, err := q.db.Query(ctx, getTransactionsByCategoryID, categoryID)
+	rows, err := q.query(ctx, q.getTransactionsByCategoryIDStmt, getTransactionsByCategoryID, categoryID)
 	if err != nil {
 		return nil, err
 	}
@@ -205,6 +211,9 @@ func (q *Queries) GetTransactionsByCategoryID(ctx context.Context, categoryID in
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -220,14 +229,14 @@ ORDER BY transaction_date DESC
 `
 
 type GetTransactionsByCategoryIDAndDateRangeParams struct {
-	UserID            int64
-	CategoryID        int64
-	TransactionDate   pgtype.Date
-	TransactionDate_2 pgtype.Date
+	UserID            int64     `json:"user_id"`
+	CategoryID        int64     `json:"category_id"`
+	TransactionDate   time.Time `json:"transaction_date"`
+	TransactionDate_2 time.Time `json:"transaction_date_2"`
 }
 
 func (q *Queries) GetTransactionsByCategoryIDAndDateRange(ctx context.Context, arg GetTransactionsByCategoryIDAndDateRangeParams) ([]Transaction, error) {
-	rows, err := q.db.Query(ctx, getTransactionsByCategoryIDAndDateRange,
+	rows, err := q.query(ctx, q.getTransactionsByCategoryIDAndDateRangeStmt, getTransactionsByCategoryIDAndDateRange,
 		arg.UserID,
 		arg.CategoryID,
 		arg.TransactionDate,
@@ -253,6 +262,9 @@ func (q *Queries) GetTransactionsByCategoryIDAndDateRange(ctx context.Context, a
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -267,13 +279,13 @@ ORDER BY transaction_date DESC
 `
 
 type GetTransactionsByDateRangeParams struct {
-	UserID            int64
-	TransactionDate   pgtype.Date
-	TransactionDate_2 pgtype.Date
+	UserID            int64     `json:"user_id"`
+	TransactionDate   time.Time `json:"transaction_date"`
+	TransactionDate_2 time.Time `json:"transaction_date_2"`
 }
 
 func (q *Queries) GetTransactionsByDateRange(ctx context.Context, arg GetTransactionsByDateRangeParams) ([]Transaction, error) {
-	rows, err := q.db.Query(ctx, getTransactionsByDateRange, arg.UserID, arg.TransactionDate, arg.TransactionDate_2)
+	rows, err := q.query(ctx, q.getTransactionsByDateRangeStmt, getTransactionsByDateRange, arg.UserID, arg.TransactionDate, arg.TransactionDate_2)
 	if err != nil {
 		return nil, err
 	}
@@ -293,6 +305,9 @@ func (q *Queries) GetTransactionsByDateRange(ctx context.Context, arg GetTransac
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -307,7 +322,7 @@ ORDER BY transaction_date DESC
 `
 
 func (q *Queries) GetTransactionsByUserID(ctx context.Context, userID int64) ([]Transaction, error) {
-	rows, err := q.db.Query(ctx, getTransactionsByUserID, userID)
+	rows, err := q.query(ctx, q.getTransactionsByUserIDStmt, getTransactionsByUserID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -327,6 +342,9 @@ func (q *Queries) GetTransactionsByUserID(ctx context.Context, userID int64) ([]
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -344,16 +362,16 @@ ORDER BY t.transaction_date DESC
 `
 
 type GetTransactionsWithCategoriesByUserIDRow struct {
-	ID              int64
-	UserID          int64
-	Amount          int64
-	Description     pgtype.Text
-	TransactionDate pgtype.Date
-	CategoryName    string
+	ID              int64          `json:"id"`
+	UserID          int64          `json:"user_id"`
+	Amount          int64          `json:"amount"`
+	Description     sql.NullString `json:"description"`
+	TransactionDate time.Time      `json:"transaction_date"`
+	CategoryName    string         `json:"category_name"`
 }
 
 func (q *Queries) GetTransactionsWithCategoriesByUserID(ctx context.Context, userID int64) ([]GetTransactionsWithCategoriesByUserIDRow, error) {
-	rows, err := q.db.Query(ctx, getTransactionsWithCategoriesByUserID, userID)
+	rows, err := q.query(ctx, q.getTransactionsWithCategoriesByUserIDStmt, getTransactionsWithCategoriesByUserID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -373,6 +391,9 @@ func (q *Queries) GetTransactionsWithCategoriesByUserID(ctx context.Context, use
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -387,12 +408,12 @@ OFFSET $2
 `
 
 type ListTransactionsParams struct {
-	Limit  int32
-	Offset int32
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
 }
 
 func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]Transaction, error) {
-	rows, err := q.db.Query(ctx, listTransactions, arg.Limit, arg.Offset)
+	rows, err := q.query(ctx, q.listTransactionsStmt, listTransactions, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -413,6 +434,9 @@ func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsPara
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -427,15 +451,15 @@ RETURNING id, user_id, amount, description, category_id, transaction_date, creat
 `
 
 type UpdateTransactionParams struct {
-	ID              int64
-	Amount          int64
-	Description     pgtype.Text
-	CategoryID      int64
-	TransactionDate pgtype.Date
+	ID              int64          `json:"id"`
+	Amount          int64          `json:"amount"`
+	Description     sql.NullString `json:"description"`
+	CategoryID      int64          `json:"category_id"`
+	TransactionDate time.Time      `json:"transaction_date"`
 }
 
 func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) (Transaction, error) {
-	row := q.db.QueryRow(ctx, updateTransaction,
+	row := q.queryRow(ctx, q.updateTransactionStmt, updateTransaction,
 		arg.ID,
 		arg.Amount,
 		arg.Description,

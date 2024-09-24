@@ -74,7 +74,7 @@ AND transaction_date BETWEEN $3 AND $4
 ORDER BY transaction_date DESC;
 
 -- name: GetMonthlyTransactionStatistics :many
-SELECT DATE_TRUNC('month', transaction_date) AS month, 
+SELECT DATE_TRUNC('month', transaction_date) AT TIME ZONE 'UTC' AS month, 
        SUM(amount) AS total_amount 
 FROM transactions 
 WHERE user_id = $1 

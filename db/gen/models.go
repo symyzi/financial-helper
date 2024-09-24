@@ -5,40 +5,41 @@
 package db
 
 import (
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
+	"time"
 )
 
 type Budget struct {
-	ID     int64
-	UserID int64
+	ID     int64 `json:"id"`
+	UserID int64 `json:"user_id"`
 	// must be positive
-	Amount     int64
-	CategoryID int64
-	CreatedAt  pgtype.Timestamptz
+	Amount     int64     `json:"amount"`
+	CategoryID int64     `json:"category_id"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type Category struct {
-	ID        int64
-	Name      string
-	CreatedAt pgtype.Timestamptz
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type Transaction struct {
-	ID     int64
-	UserID int64
+	ID     int64 `json:"id"`
+	UserID int64 `json:"user_id"`
 	// must be positive
-	Amount          int64
-	Description     pgtype.Text
-	CategoryID      int64
-	TransactionDate pgtype.Date
-	CreatedAt       pgtype.Timestamptz
+	Amount          int64          `json:"amount"`
+	Description     sql.NullString `json:"description"`
+	CategoryID      int64          `json:"category_id"`
+	TransactionDate time.Time      `json:"transaction_date"`
+	CreatedAt       time.Time      `json:"created_at"`
 }
 
 type User struct {
-	ID        int64
-	Username  string
-	Email     string
-	Password  string
-	CreatedAt pgtype.Timestamptz
-	Currency  string
+	ID        int64     `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	Password  string    `json:"password"`
+	CreatedAt time.Time `json:"created_at"`
+	Currency  string    `json:"currency"`
 }

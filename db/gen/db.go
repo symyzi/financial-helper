@@ -6,27 +6,383 @@ package db
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
+	"database/sql"
+	"fmt"
 )
 
 type DBTX interface {
-	Exec(context.Context, string, ...interface{}) (pgconn.CommandTag, error)
-	Query(context.Context, string, ...interface{}) (pgx.Rows, error)
-	QueryRow(context.Context, string, ...interface{}) pgx.Row
+	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
+	PrepareContext(context.Context, string) (*sql.Stmt, error)
+	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
+	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
 }
 
 func New(db DBTX) *Queries {
 	return &Queries{db: db}
 }
 
-type Queries struct {
-	db DBTX
+func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
+	q := Queries{db: db}
+	var err error
+	if q.checkUserCredentialsStmt, err = db.PrepareContext(ctx, checkUserCredentials); err != nil {
+		return nil, fmt.Errorf("error preparing query CheckUserCredentials: %w", err)
+	}
+	if q.createBudgetStmt, err = db.PrepareContext(ctx, createBudget); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateBudget: %w", err)
+	}
+	if q.createCategoryStmt, err = db.PrepareContext(ctx, createCategory); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateCategory: %w", err)
+	}
+	if q.createTransactionStmt, err = db.PrepareContext(ctx, createTransaction); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateTransaction: %w", err)
+	}
+	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
+	}
+	if q.deleteBudgetStmt, err = db.PrepareContext(ctx, deleteBudget); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteBudget: %w", err)
+	}
+	if q.deleteCategoryStmt, err = db.PrepareContext(ctx, deleteCategory); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteCategory: %w", err)
+	}
+	if q.deleteTransactionStmt, err = db.PrepareContext(ctx, deleteTransaction); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteTransaction: %w", err)
+	}
+	if q.deleteUserStmt, err = db.PrepareContext(ctx, deleteUser); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteUser: %w", err)
+	}
+	if q.getAllCategoriesStmt, err = db.PrepareContext(ctx, getAllCategories); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAllCategories: %w", err)
+	}
+	if q.getBudgetByCategoryIDStmt, err = db.PrepareContext(ctx, getBudgetByCategoryID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetBudgetByCategoryID: %w", err)
+	}
+	if q.getBudgetByIDStmt, err = db.PrepareContext(ctx, getBudgetByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetBudgetByID: %w", err)
+	}
+	if q.getBudgetsByUserIDStmt, err = db.PrepareContext(ctx, getBudgetsByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetBudgetsByUserID: %w", err)
+	}
+	if q.getCategoryByIDStmt, err = db.PrepareContext(ctx, getCategoryByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetCategoryByID: %w", err)
+	}
+	if q.getMonthlyTransactionStatisticsStmt, err = db.PrepareContext(ctx, getMonthlyTransactionStatistics); err != nil {
+		return nil, fmt.Errorf("error preparing query GetMonthlyTransactionStatistics: %w", err)
+	}
+	if q.getTotalAmountByCategoryAndDateRangeStmt, err = db.PrepareContext(ctx, getTotalAmountByCategoryAndDateRange); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTotalAmountByCategoryAndDateRange: %w", err)
+	}
+	if q.getTotalTransactionAmountByUserIDStmt, err = db.PrepareContext(ctx, getTotalTransactionAmountByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTotalTransactionAmountByUserID: %w", err)
+	}
+	if q.getTransactionByIDStmt, err = db.PrepareContext(ctx, getTransactionByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTransactionByID: %w", err)
+	}
+	if q.getTransactionsByCategoryIDStmt, err = db.PrepareContext(ctx, getTransactionsByCategoryID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTransactionsByCategoryID: %w", err)
+	}
+	if q.getTransactionsByCategoryIDAndDateRangeStmt, err = db.PrepareContext(ctx, getTransactionsByCategoryIDAndDateRange); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTransactionsByCategoryIDAndDateRange: %w", err)
+	}
+	if q.getTransactionsByDateRangeStmt, err = db.PrepareContext(ctx, getTransactionsByDateRange); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTransactionsByDateRange: %w", err)
+	}
+	if q.getTransactionsByUserIDStmt, err = db.PrepareContext(ctx, getTransactionsByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTransactionsByUserID: %w", err)
+	}
+	if q.getTransactionsWithCategoriesByUserIDStmt, err = db.PrepareContext(ctx, getTransactionsWithCategoriesByUserID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTransactionsWithCategoriesByUserID: %w", err)
+	}
+	if q.getUserByIDStmt, err = db.PrepareContext(ctx, getUserByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserByID: %w", err)
+	}
+	if q.getUserByUsernameStmt, err = db.PrepareContext(ctx, getUserByUsername); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserByUsername: %w", err)
+	}
+	if q.listTransactionsStmt, err = db.PrepareContext(ctx, listTransactions); err != nil {
+		return nil, fmt.Errorf("error preparing query ListTransactions: %w", err)
+	}
+	if q.updateBudgetStmt, err = db.PrepareContext(ctx, updateBudget); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateBudget: %w", err)
+	}
+	if q.updateCategoryStmt, err = db.PrepareContext(ctx, updateCategory); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateCategory: %w", err)
+	}
+	if q.updateTransactionStmt, err = db.PrepareContext(ctx, updateTransaction); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateTransaction: %w", err)
+	}
+	if q.updateUserStmt, err = db.PrepareContext(ctx, updateUser); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateUser: %w", err)
+	}
+	if q.updateUserPasswordStmt, err = db.PrepareContext(ctx, updateUserPassword); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateUserPassword: %w", err)
+	}
+	return &q, nil
 }
 
-func (q *Queries) WithTx(tx pgx.Tx) *Queries {
+func (q *Queries) Close() error {
+	var err error
+	if q.checkUserCredentialsStmt != nil {
+		if cerr := q.checkUserCredentialsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing checkUserCredentialsStmt: %w", cerr)
+		}
+	}
+	if q.createBudgetStmt != nil {
+		if cerr := q.createBudgetStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createBudgetStmt: %w", cerr)
+		}
+	}
+	if q.createCategoryStmt != nil {
+		if cerr := q.createCategoryStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createCategoryStmt: %w", cerr)
+		}
+	}
+	if q.createTransactionStmt != nil {
+		if cerr := q.createTransactionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createTransactionStmt: %w", cerr)
+		}
+	}
+	if q.createUserStmt != nil {
+		if cerr := q.createUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
+		}
+	}
+	if q.deleteBudgetStmt != nil {
+		if cerr := q.deleteBudgetStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteBudgetStmt: %w", cerr)
+		}
+	}
+	if q.deleteCategoryStmt != nil {
+		if cerr := q.deleteCategoryStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteCategoryStmt: %w", cerr)
+		}
+	}
+	if q.deleteTransactionStmt != nil {
+		if cerr := q.deleteTransactionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteTransactionStmt: %w", cerr)
+		}
+	}
+	if q.deleteUserStmt != nil {
+		if cerr := q.deleteUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteUserStmt: %w", cerr)
+		}
+	}
+	if q.getAllCategoriesStmt != nil {
+		if cerr := q.getAllCategoriesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAllCategoriesStmt: %w", cerr)
+		}
+	}
+	if q.getBudgetByCategoryIDStmt != nil {
+		if cerr := q.getBudgetByCategoryIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getBudgetByCategoryIDStmt: %w", cerr)
+		}
+	}
+	if q.getBudgetByIDStmt != nil {
+		if cerr := q.getBudgetByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getBudgetByIDStmt: %w", cerr)
+		}
+	}
+	if q.getBudgetsByUserIDStmt != nil {
+		if cerr := q.getBudgetsByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getBudgetsByUserIDStmt: %w", cerr)
+		}
+	}
+	if q.getCategoryByIDStmt != nil {
+		if cerr := q.getCategoryByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getCategoryByIDStmt: %w", cerr)
+		}
+	}
+	if q.getMonthlyTransactionStatisticsStmt != nil {
+		if cerr := q.getMonthlyTransactionStatisticsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getMonthlyTransactionStatisticsStmt: %w", cerr)
+		}
+	}
+	if q.getTotalAmountByCategoryAndDateRangeStmt != nil {
+		if cerr := q.getTotalAmountByCategoryAndDateRangeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTotalAmountByCategoryAndDateRangeStmt: %w", cerr)
+		}
+	}
+	if q.getTotalTransactionAmountByUserIDStmt != nil {
+		if cerr := q.getTotalTransactionAmountByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTotalTransactionAmountByUserIDStmt: %w", cerr)
+		}
+	}
+	if q.getTransactionByIDStmt != nil {
+		if cerr := q.getTransactionByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTransactionByIDStmt: %w", cerr)
+		}
+	}
+	if q.getTransactionsByCategoryIDStmt != nil {
+		if cerr := q.getTransactionsByCategoryIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTransactionsByCategoryIDStmt: %w", cerr)
+		}
+	}
+	if q.getTransactionsByCategoryIDAndDateRangeStmt != nil {
+		if cerr := q.getTransactionsByCategoryIDAndDateRangeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTransactionsByCategoryIDAndDateRangeStmt: %w", cerr)
+		}
+	}
+	if q.getTransactionsByDateRangeStmt != nil {
+		if cerr := q.getTransactionsByDateRangeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTransactionsByDateRangeStmt: %w", cerr)
+		}
+	}
+	if q.getTransactionsByUserIDStmt != nil {
+		if cerr := q.getTransactionsByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTransactionsByUserIDStmt: %w", cerr)
+		}
+	}
+	if q.getTransactionsWithCategoriesByUserIDStmt != nil {
+		if cerr := q.getTransactionsWithCategoriesByUserIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTransactionsWithCategoriesByUserIDStmt: %w", cerr)
+		}
+	}
+	if q.getUserByIDStmt != nil {
+		if cerr := q.getUserByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserByIDStmt: %w", cerr)
+		}
+	}
+	if q.getUserByUsernameStmt != nil {
+		if cerr := q.getUserByUsernameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserByUsernameStmt: %w", cerr)
+		}
+	}
+	if q.listTransactionsStmt != nil {
+		if cerr := q.listTransactionsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listTransactionsStmt: %w", cerr)
+		}
+	}
+	if q.updateBudgetStmt != nil {
+		if cerr := q.updateBudgetStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateBudgetStmt: %w", cerr)
+		}
+	}
+	if q.updateCategoryStmt != nil {
+		if cerr := q.updateCategoryStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateCategoryStmt: %w", cerr)
+		}
+	}
+	if q.updateTransactionStmt != nil {
+		if cerr := q.updateTransactionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateTransactionStmt: %w", cerr)
+		}
+	}
+	if q.updateUserStmt != nil {
+		if cerr := q.updateUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateUserStmt: %w", cerr)
+		}
+	}
+	if q.updateUserPasswordStmt != nil {
+		if cerr := q.updateUserPasswordStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateUserPasswordStmt: %w", cerr)
+		}
+	}
+	return err
+}
+
+func (q *Queries) exec(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (sql.Result, error) {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).ExecContext(ctx, args...)
+	case stmt != nil:
+		return stmt.ExecContext(ctx, args...)
+	default:
+		return q.db.ExecContext(ctx, query, args...)
+	}
+}
+
+func (q *Queries) query(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (*sql.Rows, error) {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).QueryContext(ctx, args...)
+	case stmt != nil:
+		return stmt.QueryContext(ctx, args...)
+	default:
+		return q.db.QueryContext(ctx, query, args...)
+	}
+}
+
+func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) *sql.Row {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).QueryRowContext(ctx, args...)
+	case stmt != nil:
+		return stmt.QueryRowContext(ctx, args...)
+	default:
+		return q.db.QueryRowContext(ctx, query, args...)
+	}
+}
+
+type Queries struct {
+	db                                          DBTX
+	tx                                          *sql.Tx
+	checkUserCredentialsStmt                    *sql.Stmt
+	createBudgetStmt                            *sql.Stmt
+	createCategoryStmt                          *sql.Stmt
+	createTransactionStmt                       *sql.Stmt
+	createUserStmt                              *sql.Stmt
+	deleteBudgetStmt                            *sql.Stmt
+	deleteCategoryStmt                          *sql.Stmt
+	deleteTransactionStmt                       *sql.Stmt
+	deleteUserStmt                              *sql.Stmt
+	getAllCategoriesStmt                        *sql.Stmt
+	getBudgetByCategoryIDStmt                   *sql.Stmt
+	getBudgetByIDStmt                           *sql.Stmt
+	getBudgetsByUserIDStmt                      *sql.Stmt
+	getCategoryByIDStmt                         *sql.Stmt
+	getMonthlyTransactionStatisticsStmt         *sql.Stmt
+	getTotalAmountByCategoryAndDateRangeStmt    *sql.Stmt
+	getTotalTransactionAmountByUserIDStmt       *sql.Stmt
+	getTransactionByIDStmt                      *sql.Stmt
+	getTransactionsByCategoryIDStmt             *sql.Stmt
+	getTransactionsByCategoryIDAndDateRangeStmt *sql.Stmt
+	getTransactionsByDateRangeStmt              *sql.Stmt
+	getTransactionsByUserIDStmt                 *sql.Stmt
+	getTransactionsWithCategoriesByUserIDStmt   *sql.Stmt
+	getUserByIDStmt                             *sql.Stmt
+	getUserByUsernameStmt                       *sql.Stmt
+	listTransactionsStmt                        *sql.Stmt
+	updateBudgetStmt                            *sql.Stmt
+	updateCategoryStmt                          *sql.Stmt
+	updateTransactionStmt                       *sql.Stmt
+	updateUserStmt                              *sql.Stmt
+	updateUserPasswordStmt                      *sql.Stmt
+}
+
+func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db: tx,
+		db:                                       tx,
+		tx:                                       tx,
+		checkUserCredentialsStmt:                 q.checkUserCredentialsStmt,
+		createBudgetStmt:                         q.createBudgetStmt,
+		createCategoryStmt:                       q.createCategoryStmt,
+		createTransactionStmt:                    q.createTransactionStmt,
+		createUserStmt:                           q.createUserStmt,
+		deleteBudgetStmt:                         q.deleteBudgetStmt,
+		deleteCategoryStmt:                       q.deleteCategoryStmt,
+		deleteTransactionStmt:                    q.deleteTransactionStmt,
+		deleteUserStmt:                           q.deleteUserStmt,
+		getAllCategoriesStmt:                     q.getAllCategoriesStmt,
+		getBudgetByCategoryIDStmt:                q.getBudgetByCategoryIDStmt,
+		getBudgetByIDStmt:                        q.getBudgetByIDStmt,
+		getBudgetsByUserIDStmt:                   q.getBudgetsByUserIDStmt,
+		getCategoryByIDStmt:                      q.getCategoryByIDStmt,
+		getMonthlyTransactionStatisticsStmt:      q.getMonthlyTransactionStatisticsStmt,
+		getTotalAmountByCategoryAndDateRangeStmt: q.getTotalAmountByCategoryAndDateRangeStmt,
+		getTotalTransactionAmountByUserIDStmt:    q.getTotalTransactionAmountByUserIDStmt,
+		getTransactionByIDStmt:                   q.getTransactionByIDStmt,
+		getTransactionsByCategoryIDStmt:          q.getTransactionsByCategoryIDStmt,
+		getTransactionsByCategoryIDAndDateRangeStmt: q.getTransactionsByCategoryIDAndDateRangeStmt,
+		getTransactionsByDateRangeStmt:              q.getTransactionsByDateRangeStmt,
+		getTransactionsByUserIDStmt:                 q.getTransactionsByUserIDStmt,
+		getTransactionsWithCategoriesByUserIDStmt:   q.getTransactionsWithCategoriesByUserIDStmt,
+		getUserByIDStmt:                             q.getUserByIDStmt,
+		getUserByUsernameStmt:                       q.getUserByUsernameStmt,
+		listTransactionsStmt:                        q.listTransactionsStmt,
+		updateBudgetStmt:                            q.updateBudgetStmt,
+		updateCategoryStmt:                          q.updateCategoryStmt,
+		updateTransactionStmt:                       q.updateTransactionStmt,
+		updateUserStmt:                              q.updateUserStmt,
+		updateUserPasswordStmt:                      q.updateUserPasswordStmt,
 	}
 }
