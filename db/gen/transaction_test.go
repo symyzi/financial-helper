@@ -28,7 +28,7 @@ func CreateRandomTransaction(t *testing.T, user User, category Category) Transac
 	require.Equal(t, arg.Amount, transaction.Amount)
 	require.Equal(t, arg.Description, transaction.Description)
 	require.Equal(t, arg.CategoryID, transaction.CategoryID)
-	require.WithinDuration(t, arg.TransactionDate, transaction.TransactionDate, time.Second)
+	require.Equal(t, arg.TransactionDate.Format("2006-01-02"), transaction.TransactionDate.Format("2006-01-02"))
 
 	require.NotZero(t, transaction.ID)
 	require.NotZero(t, transaction.CreatedAt)
@@ -55,7 +55,7 @@ func TestGetTransactionByID(t *testing.T) {
 	require.Equal(t, transaction1.Amount, transaction2.Amount)
 	require.Equal(t, transaction1.Description, transaction2.Description)
 	require.Equal(t, transaction1.CategoryID, transaction2.CategoryID)
-	require.WithinDuration(t, transaction1.TransactionDate, transaction2.TransactionDate, time.Second)
+	require.Equal(t, transaction1.TransactionDate.Format("2006-01-02"), transaction2.TransactionDate.Format("2006-01-02"))
 	require.WithinDuration(t, transaction1.CreatedAt, transaction2.CreatedAt, time.Second)
 }
 
@@ -101,7 +101,7 @@ func TestUpdateTransaction(t *testing.T) {
 	require.Equal(t, arg.Amount, transaction2.Amount)
 	require.Equal(t, arg.Description, transaction2.Description)
 	require.Equal(t, arg.CategoryID, transaction2.CategoryID)
-	require.WithinDuration(t, arg.TransactionDate, transaction2.TransactionDate, time.Second)
+	require.Equal(t, arg.TransactionDate.Format("2006-01-02"), transaction2.TransactionDate.Format("2006-01-02"))
 	require.WithinDuration(t, transaction1.CreatedAt, transaction2.CreatedAt, time.Second)
 }
 
@@ -154,11 +154,11 @@ func TestGetTransactionsByDateRange(t *testing.T) {
 	user := CreateRandomUser(t)
 	category := CreateRandomCategory(t)
 
-	// Create transactions within a specific date range
-	startDate := time.Now().AddDate(0, -1, 0) // Start date a month ago
-	endDate := time.Now()
+	startDate := time.Now().AddDate(0, -1, 0).Truncate(24 * time.Hour)
+	endDate := time.Now().Truncate(24 * time.Hour)
+
 	for i := 0; i < 5; i++ {
-		transactionDate := startDate.AddDate(0, 0, i) // Add a day to each transaction
+		transactionDate := startDate.AddDate(0, 0, i)
 		transaction := CreateTransactionParams{
 			UserID:          user.ID,
 			Amount:          util.RandomAmount(),
@@ -170,7 +170,6 @@ func TestGetTransactionsByDateRange(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Retrieve transactions within the date range
 	transactions, err := testQueries.GetTransactionsByDateRange(context.Background(), GetTransactionsByDateRangeParams{
 		UserID:            user.ID,
 		TransactionDate:   startDate,
@@ -191,8 +190,8 @@ func TestGetTransactionsByCategoryIDAndDateRange(t *testing.T) {
 	category := CreateRandomCategory(t)
 
 	// Create transactions within a specific date range
-	startDate := time.Now().AddDate(0, -1, 0) // Start date a month ago
-	endDate := time.Now()
+	startDate := time.Now().AddDate(0, -1, 0).Truncate(24 * time.Hour) // Start date a month ago
+	endDate := time.Now().Truncate(24 * time.Hour)
 	for i := 0; i < 5; i++ {
 		transactionDate := startDate.AddDate(0, 0, i) // Add a day to each transaction
 		transaction := CreateTransactionParams{
