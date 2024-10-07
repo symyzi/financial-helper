@@ -83,7 +83,7 @@ func (q *Queries) GetMonthlyTransactionStatistics(ctx context.Context, userID in
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetMonthlyTransactionStatisticsRow
+	items := []GetMonthlyTransactionStatisticsRow{}
 	for rows.Next() {
 		var i GetMonthlyTransactionStatisticsRow
 		if err := rows.Scan(&i.Month, &i.TotalAmount); err != nil {
@@ -124,7 +124,7 @@ func (q *Queries) GetTotalAmountByCategoryAndDateRange(ctx context.Context, arg 
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetTotalAmountByCategoryAndDateRangeRow
+	items := []GetTotalAmountByCategoryAndDateRangeRow{}
 	for rows.Next() {
 		var i GetTotalAmountByCategoryAndDateRangeRow
 		if err := rows.Scan(&i.CategoryID, &i.TotalAmount); err != nil {
@@ -196,7 +196,7 @@ func (q *Queries) GetTransactionsByCategoryID(ctx context.Context, categoryID in
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetTransactionsByCategoryIDRow
+	items := []GetTransactionsByCategoryIDRow{}
 	for rows.Next() {
 		var i GetTransactionsByCategoryIDRow
 		if err := rows.Scan(
@@ -246,7 +246,7 @@ func (q *Queries) GetTransactionsByCategoryIDAndDateRange(ctx context.Context, a
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Transaction
+	items := []Transaction{}
 	for rows.Next() {
 		var i Transaction
 		if err := rows.Scan(
@@ -290,7 +290,7 @@ func (q *Queries) GetTransactionsByDateRange(ctx context.Context, arg GetTransac
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Transaction
+	items := []Transaction{}
 	for rows.Next() {
 		var i Transaction
 		if err := rows.Scan(
@@ -327,7 +327,7 @@ func (q *Queries) GetTransactionsByUserID(ctx context.Context, userID int64) ([]
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Transaction
+	items := []Transaction{}
 	for rows.Next() {
 		var i Transaction
 		if err := rows.Scan(
@@ -376,7 +376,7 @@ func (q *Queries) GetTransactionsWithCategoriesByUserID(ctx context.Context, use
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetTransactionsWithCategoriesByUserIDRow
+	items := []GetTransactionsWithCategoriesByUserIDRow{}
 	for rows.Next() {
 		var i GetTransactionsWithCategoriesByUserIDRow
 		if err := rows.Scan(
@@ -418,7 +418,7 @@ func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsPara
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Transaction
+	items := []Transaction{}
 	for rows.Next() {
 		var i Transaction
 		if err := rows.Scan(

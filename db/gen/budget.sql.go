@@ -97,7 +97,7 @@ func (q *Queries) GetBudgetsByUserID(ctx context.Context, userID int64) ([]Budge
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Budget
+	items := []Budget{}
 	for rows.Next() {
 		var i Budget
 		if err := rows.Scan(
