@@ -10,28 +10,28 @@ import (
 )
 
 const createBudget = `-- name: CreateBudget :one
-INSERT INTO budget (
-  user_id,
+INSERT INTO budgets (
+  wallet_id,
   category_id,
   amount
 ) VALUES (
   $1, $2, $3
 )
-RETURNING id, user_id, amount, category_id, created_at
+RETURNING id, wallet_id, amount, category_id, created_at
 `
 
 type CreateBudgetParams struct {
-	UserID     int64 `json:"user_id"`
+	WalletID   int64 `json:"wallet_id"`
 	CategoryID int64 `json:"category_id"`
 	Amount     int64 `json:"amount"`
 }
 
 func (q *Queries) CreateBudget(ctx context.Context, arg CreateBudgetParams) (Budget, error) {
-	row := q.queryRow(ctx, q.createBudgetStmt, createBudget, arg.UserID, arg.CategoryID, arg.Amount)
+	row := q.queryRow(ctx, q.createBudgetStmt, createBudget, arg.WalletID, arg.CategoryID, arg.Amount)
 	var i Budget
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
+		&i.WalletID,
 		&i.Amount,
 		&i.CategoryID,
 		&i.CreatedAt,
@@ -40,7 +40,7 @@ func (q *Queries) CreateBudget(ctx context.Context, arg CreateBudgetParams) (Bud
 }
 
 const deleteBudget = `-- name: DeleteBudget :exec
-DELETE FROM budget
+DELETE FROM budgets
 WHERE id = $1
 `
 
@@ -50,7 +50,7 @@ func (q *Queries) DeleteBudget(ctx context.Context, id int64) error {
 }
 
 const getBudgetByCategoryID = `-- name: GetBudgetByCategoryID :one
-SELECT id, user_id, amount, category_id, created_at FROM budget 
+SELECT id, wallet_id, amount, category_id, created_at FROM budgets 
 WHERE category_id = $1
 `
 
@@ -59,7 +59,7 @@ func (q *Queries) GetBudgetByCategoryID(ctx context.Context, categoryID int64) (
 	var i Budget
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
+		&i.WalletID,
 		&i.Amount,
 		&i.CategoryID,
 		&i.CreatedAt,
@@ -68,7 +68,7 @@ func (q *Queries) GetBudgetByCategoryID(ctx context.Context, categoryID int64) (
 }
 
 const getBudgetByID = `-- name: GetBudgetByID :one
-SELECT id, user_id, amount, category_id, created_at FROM budget 
+SELECT id, wallet_id, amount, category_id, created_at FROM budgets 
 WHERE id = $1
 `
 
@@ -77,7 +77,7 @@ func (q *Queries) GetBudgetByID(ctx context.Context, id int64) (Budget, error) {
 	var i Budget
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
+		&i.WalletID,
 		&i.Amount,
 		&i.CategoryID,
 		&i.CreatedAt,
@@ -85,24 +85,24 @@ func (q *Queries) GetBudgetByID(ctx context.Context, id int64) (Budget, error) {
 	return i, err
 }
 
-const getBudgetsByUserID = `-- name: GetBudgetsByUserID :many
-SELECT id, user_id, amount, category_id, created_at FROM budget 
-WHERE user_id = $1 
+const getBudgetsByWalletID = `-- name: GetBudgetsByWalletID :many
+SELECT id, wallet_id, amount, category_id, created_at FROM budgets 
+WHERE wallet_id = $1 
 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetBudgetsByUserID(ctx context.Context, userID int64) ([]Budget, error) {
-	rows, err := q.query(ctx, q.getBudgetsByUserIDStmt, getBudgetsByUserID, userID)
+func (q *Queries) GetBudgetsByWalletID(ctx context.Context, walletID int64) ([]Budget, error) {
+	rows, err := q.query(ctx, q.getBudgetsByWalletIDStmt, getBudgetsByWalletID, walletID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Budget
+	items := []Budget{}
 	for rows.Next() {
 		var i Budget
 		if err := rows.Scan(
 			&i.ID,
-			&i.UserID,
+			&i.WalletID,
 			&i.Amount,
 			&i.CategoryID,
 			&i.CreatedAt,
@@ -121,10 +121,10 @@ func (q *Queries) GetBudgetsByUserID(ctx context.Context, userID int64) ([]Budge
 }
 
 const updateBudget = `-- name: UpdateBudget :one
-UPDATE budget 
+UPDATE budgets 
 SET amount = $2, category_id = $3 
 WHERE id = $1
-RETURNING id, user_id, amount, category_id, created_at
+RETURNING id, wallet_id, amount, category_id, created_at
 `
 
 type UpdateBudgetParams struct {
@@ -138,7 +138,7 @@ func (q *Queries) UpdateBudget(ctx context.Context, arg UpdateBudgetParams) (Bud
 	var i Budget
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
+		&i.WalletID,
 		&i.Amount,
 		&i.CategoryID,
 		&i.CreatedAt,

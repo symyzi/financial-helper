@@ -10,8 +10,8 @@ import (
 )
 
 type Budget struct {
-	ID     int64 `json:"id"`
-	UserID int64 `json:"user_id"`
+	ID       int64 `json:"id"`
+	WalletID int64 `json:"wallet_id"`
 	// must be positive
 	Amount     int64     `json:"amount"`
 	CategoryID int64     `json:"category_id"`
@@ -24,22 +24,30 @@ type Category struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-type Transaction struct {
-	ID     int64 `json:"id"`
-	UserID int64 `json:"user_id"`
+type Expense struct {
+	ID       int64 `json:"id"`
+	WalletID int64 `json:"wallet_id"`
 	// must be positive
-	Amount          int64          `json:"amount"`
-	Description     sql.NullString `json:"description"`
-	CategoryID      int64          `json:"category_id"`
-	TransactionDate time.Time      `json:"transaction_date"`
-	CreatedAt       time.Time      `json:"created_at"`
+	Amount             int64          `json:"amount"`
+	ExpenseDescription sql.NullString `json:"expense_description"`
+	CategoryID         int64          `json:"category_id"`
+	ExpenseDate        time.Time      `json:"expense_date"`
+	CreatedAt          time.Time      `json:"created_at"`
 }
 
 type User struct {
+	Username          string    `json:"username"`
+	FullName          string    `json:"full_name"`
+	Email             string    `json:"email"`
+	HashedPassword    string    `json:"hashed_password"`
+	PasswordChangedAt time.Time `json:"password_changed_at"`
+	CreatedAt         time.Time `json:"created_at"`
+}
+
+type Wallet struct {
+	Name      string    `json:"name"`
 	ID        int64     `json:"id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Password  string    `json:"password"`
-	CreatedAt time.Time `json:"created_at"`
+	Owner     string    `json:"owner"`
 	Currency  string    `json:"currency"`
+	CreatedAt time.Time `json:"created_at"`
 }

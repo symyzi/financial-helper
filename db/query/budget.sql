@@ -1,6 +1,6 @@
 -- name: CreateBudget :one
-INSERT INTO budget (
-  user_id,
+INSERT INTO budgets (
+  wallet_id,
   category_id,
   amount
 ) VALUES (
@@ -9,24 +9,24 @@ INSERT INTO budget (
 RETURNING *;
 
 -- name: GetBudgetByID :one
-SELECT * FROM budget 
+SELECT * FROM budgets 
 WHERE id = $1;
 
--- name: GetBudgetsByUserID :many
-SELECT * FROM budget 
-WHERE user_id = $1 
+-- name: GetBudgetsByWalletID :many
+SELECT * FROM budgets 
+WHERE wallet_id = $1 
 ORDER BY created_at DESC;
 
 -- name: UpdateBudget :one
-UPDATE budget 
+UPDATE budgets 
 SET amount = $2, category_id = $3 
 WHERE id = $1
 RETURNING *;
 
 -- name: DeleteBudget :exec
-DELETE FROM budget
+DELETE FROM budgets
 WHERE id = $1;
 
 -- name: GetBudgetByCategoryID :one
-SELECT * FROM budget 
+SELECT * FROM budgets 
 WHERE category_id = $1;

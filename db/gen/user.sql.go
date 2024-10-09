@@ -7,183 +7,101 @@ package db
 
 import (
 	"context"
-	"time"
+	"database/sql"
 )
-
-const checkUserCredentials = `-- name: CheckUserCredentials :one
-SELECT id, username, email 
-FROM users 
-WHERE username = $1 AND password = $2
-`
-
-type CheckUserCredentialsParams struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type CheckUserCredentialsRow struct {
-	ID       int64  `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-}
-
-func (q *Queries) CheckUserCredentials(ctx context.Context, arg CheckUserCredentialsParams) (CheckUserCredentialsRow, error) {
-	row := q.queryRow(ctx, q.checkUserCredentialsStmt, checkUserCredentials, arg.Username, arg.Password)
-	var i CheckUserCredentialsRow
-	err := row.Scan(&i.ID, &i.Username, &i.Email)
-	return i, err
-}
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
-  username,
-  email,
-  password,
-  currency
-) VALUES (
-  $1, $2, $3, $4
-)
-RETURNING id, username, email, password, created_at, currency
+    username,
+    full_name,
+    email,
+    hashed_password
+) VALUES(
+    $1, $2, $3, $4
+) RETURNING username, full_name, email, hashed_password, password_changed_at, created_at
 `
 
 type CreateUserParams struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Currency string `json:"currency"`
+	Username       string `json:"username"`
+	FullName       string `json:"full_name"`
+	Email          string `json:"email"`
+	HashedPassword string `json:"hashed_password"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.queryRow(ctx, q.createUserStmt, createUser,
 		arg.Username,
+		arg.FullName,
 		arg.Email,
-		arg.Password,
-		arg.Currency,
+		arg.HashedPassword,
 	)
 	var i User
 	err := row.Scan(
-		&i.ID,
 		&i.Username,
+		&i.FullName,
 		&i.Email,
-		&i.Password,
+		&i.HashedPassword,
+		&i.PasswordChangedAt,
 		&i.CreatedAt,
-		&i.Currency,
-	)
-	return i, err
-}
-
-const deleteUser = `-- name: DeleteUser :exec
-DELETE FROM users 
-WHERE id = $1
-`
-
-func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
-	_, err := q.exec(ctx, q.deleteUserStmt, deleteUser, id)
-	return err
-}
-
-const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, email, password, created_at, currency FROM users 
-WHERE id = $1
-`
-
-func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
-	row := q.queryRow(ctx, q.getUserByIDStmt, getUserByID, id)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.Email,
-		&i.Password,
-		&i.CreatedAt,
-		&i.Currency,
 	)
 	return i, err
 }
 
-const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, password, created_at, currency FROM users 
-WHERE username = $1
+const getUser = `-- name: GetUser :one
+SELECT username, full_name, email, hashed_password, password_changed_at, created_at FROM users
+WHERE username = $1 LIMIT 1
 `
 
-func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
-	row := q.queryRow(ctx, q.getUserByUsernameStmt, getUserByUsername, username)
+func (q *Queries) GetUser(ctx context.Context, username string) (User, error) {
+	row := q.queryRow(ctx, q.getUserStmt, getUser, username)
 	var i User
 	err := row.Scan(
-		&i.ID,
 		&i.Username,
+		&i.FullName,
 		&i.Email,
-		&i.Password,
+		&i.HashedPassword,
+		&i.PasswordChangedAt,
 		&i.CreatedAt,
-		&i.Currency,
 	)
 	return i, err
 }
 
 const updateUser = `-- name: UpdateUser :one
-UPDATE users 
-SET username = $2, email = $3, password = $4, currency = $5 
-WHERE id = $1
-RETURNING id, username, email, password, created_at, currency
+UPDATE users
+SET
+    full_name = COALESCE($1, full_name),
+    email = COALESCE($2, email),
+    hashed_password = COALESCE($3, hashed_password),
+    password_changed_at = COALESCE($4, password_changed_at)
+WHERE
+    username = $5
+RETURNING username, full_name, email, hashed_password, password_changed_at, created_at
 `
 
 type UpdateUserParams struct {
-	ID       int64  `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Currency string `json:"currency"`
+	FullName          sql.NullString `json:"full_name"`
+	Email             sql.NullString `json:"email"`
+	HashedPassword    sql.NullString `json:"hashed_password"`
+	PasswordChangedAt sql.NullTime   `json:"password_changed_at"`
+	Username          string         `json:"username"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
 	row := q.queryRow(ctx, q.updateUserStmt, updateUser,
-		arg.ID,
-		arg.Username,
+		arg.FullName,
 		arg.Email,
-		arg.Password,
-		arg.Currency,
+		arg.HashedPassword,
+		arg.PasswordChangedAt,
+		arg.Username,
 	)
 	var i User
 	err := row.Scan(
-		&i.ID,
 		&i.Username,
+		&i.FullName,
 		&i.Email,
-		&i.Password,
+		&i.HashedPassword,
+		&i.PasswordChangedAt,
 		&i.CreatedAt,
-		&i.Currency,
-	)
-	return i, err
-}
-
-const updateUserPassword = `-- name: UpdateUserPassword :one
-UPDATE users 
-SET password = $2 
-WHERE id = $1 
-RETURNING id, username, email, created_at, currency
-`
-
-type UpdateUserPasswordParams struct {
-	ID       int64  `json:"id"`
-	Password string `json:"password"`
-}
-
-type UpdateUserPasswordRow struct {
-	ID        int64     `json:"id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"created_at"`
-	Currency  string    `json:"currency"`
-}
-
-func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (UpdateUserPasswordRow, error) {
-	row := q.queryRow(ctx, q.updateUserPasswordStmt, updateUserPassword, arg.ID, arg.Password)
-	var i UpdateUserPasswordRow
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.Email,
-		&i.CreatedAt,
-		&i.Currency,
 	)
 	return i, err
 }
