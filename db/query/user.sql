@@ -1,39 +1,24 @@
 -- name: CreateUser :one
 INSERT INTO users (
-  username,
-  email,
-  password,
-  currency
-) VALUES (
-  $1, $2, $3, $4
-)
-RETURNING *;
+    username,
+    full_name,
+    email,
+    hashed_password
+) VALUES(
+    $1, $2, $3, $4
+) RETURNING *;
 
--- name: GetUserByID :one
-SELECT * FROM users 
-WHERE id = $1;
-
--- name: GetUserByUsername :one
-SELECT * FROM users 
-WHERE username = $1;
+-- name: GetUser :one
+SELECT * FROM users
+WHERE username = $1 LIMIT 1;
 
 -- name: UpdateUser :one
-UPDATE users 
-SET username = $2, email = $3, password = $4, currency = $5 
-WHERE id = $1
+UPDATE users
+SET
+    full_name = COALESCE(sqlc.narg(full_name), full_name),
+    email = COALESCE(sqlc.narg(email), email),
+    hashed_password = COALESCE(sqlc.narg(hashed_password), hashed_password),
+    password_changed_at = COALESCE(sqlc.narg(password_changed_at), password_changed_at)
+WHERE
+    username = sqlc.arg(username)
 RETURNING *;
-
--- name: DeleteUser :exec
-DELETE FROM users 
-WHERE id = $1;
-
--- name: UpdateUserPassword :one
-UPDATE users 
-SET password = $2 
-WHERE id = $1 
-RETURNING id, username, email, created_at, currency;
-
--- name: CheckUserCredentials :one
-SELECT id, username, email 
-FROM users 
-WHERE username = $1 AND password = $2;

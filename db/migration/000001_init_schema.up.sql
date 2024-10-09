@@ -1,10 +1,10 @@
 CREATE TABLE "users" (
-  "id" bigserial PRIMARY KEY,
-  "username" varchar UNIQUE NOT NULL,
+  "username" varchar PRIMARY KEY,
+  "full_name" varchar NOT NULL,
   "email" varchar UNIQUE NOT NULL,
-  "password" varchar UNIQUE NOT NULL,
-  "created_at" timestamptz NOT NULL DEFAULT (now()),
-  "currency" varchar NOT NULL
+  "hashed_password" varchar NOT NULL,
+  "password_changed_at" timestamptz NOT NULL DEFAULT '0001-01-01 00:00:00Z',
+  "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "categories" (
@@ -13,51 +13,59 @@ CREATE TABLE "categories" (
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
-CREATE TABLE "transactions" (
+CREATE TABLE "expenses" (
   "id" bigserial PRIMARY KEY,
-  "user_id" bigint NOT NULL,
+  "wallet_id" bigint NOT NULL,
   "amount" bigint NOT NULL,
-  "description" varchar,
+  "expense_description" varchar,
   "category_id" bigint NOT NULL,
-  "transaction_date" date NOT NULL,
+  "expense_date" date NOT NULL,
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
-CREATE TABLE "budget" (
+CREATE TABLE "budgets" (
   "id" bigserial PRIMARY KEY,
-  "user_id" bigint NOT NULL,
+  "wallet_id" bigint NOT NULL,
   "amount" bigint NOT NULL,
   "category_id" bigint NOT NULL,
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
-CREATE INDEX ON "users" ("username");
+CREATE TABLE "wallets" (
+  "name" varchar NOT NULL,
+  "id" bigserial PRIMARY KEY,
+  "owner" varchar NOT NULL,
+  "currency" varchar NOT NULL,
+  "created_at" timestamptz NOT NULL DEFAULT (now())
+);
 
-CREATE INDEX ON "users" ("email");
+CREATE INDEX ON "expenses" ("wallet_id");
 
-CREATE INDEX ON "transactions" ("user_id");
+CREATE INDEX ON "expenses" ("category_id");
 
-CREATE INDEX ON "transactions" ("category_id");
+CREATE INDEX ON "expenses" ("expense_date");
 
-CREATE INDEX ON "transactions" ("transaction_date");
+CREATE INDEX ON "expenses" ("wallet_id", "expense_date");
 
-CREATE INDEX ON "transactions" ("user_id", "transaction_date");
+CREATE INDEX ON "budgets" ("wallet_id");
 
-CREATE INDEX ON "budget" ("user_id");
+CREATE INDEX ON "budgets" ("category_id");
 
-CREATE INDEX ON "budget" ("category_id");
+CREATE INDEX ON "budgets" ("wallet_id", "category_id");
 
-CREATE INDEX ON "budget" ("user_id", "category_id");
+CREATE INDEX ON "wallets" ("owner");
 
-COMMENT ON COLUMN "transactions"."amount" IS 'must be positive';
+COMMENT ON COLUMN "expenses"."amount" IS 'must be positive';
 
-COMMENT ON COLUMN "budget"."amount" IS 'must be positive';
+COMMENT ON COLUMN "budgets"."amount" IS 'must be positive';
 
-ALTER TABLE "transactions" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
+ALTER TABLE "expenses" ADD FOREIGN KEY ("wallet_id") REFERENCES "wallets" ("id");
 
-ALTER TABLE "transactions" ADD FOREIGN KEY ("category_id") REFERENCES "categories" ("id");
+ALTER TABLE "expenses" ADD FOREIGN KEY ("category_id") REFERENCES "categories" ("id");
 
-ALTER TABLE "budget" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
+ALTER TABLE "budgets" ADD FOREIGN KEY ("wallet_id") REFERENCES "wallets" ("id");
 
-ALTER TABLE "budget" ADD FOREIGN KEY ("category_id") REFERENCES "categories" ("id");
+ALTER TABLE "budgets" ADD FOREIGN KEY ("category_id") REFERENCES "categories" ("id");
+
+ALTER TABLE "wallets" ADD FOREIGN KEY ("owner") REFERENCES "users" ("username");
 

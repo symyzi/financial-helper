@@ -25,7 +25,6 @@ func CreateRandomCategory(t *testing.T) Category {
 func TestCreateCategory(t *testing.T) {
 	CreateRandomCategory(t)
 }
-
 func TestGetCategoryByID(t *testing.T) {
 	category1 := CreateRandomCategory(t)
 	category2, err := testQueries.GetCategoryByID(context.Background(), category1.ID)
