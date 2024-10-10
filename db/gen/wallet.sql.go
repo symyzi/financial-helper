@@ -42,11 +42,16 @@ func (q *Queries) CreateWallet(ctx context.Context, arg CreateWalletParams) (Wal
 
 const deleteWallet = `-- name: DeleteWallet :exec
 DELETE FROM wallets
-WHERE id = $1
+WHERE id = $1 AND owner = $2
 `
 
-func (q *Queries) DeleteWallet(ctx context.Context, id int64) error {
-	_, err := q.exec(ctx, q.deleteWalletStmt, deleteWallet, id)
+type DeleteWalletParams struct {
+	ID    int64  `json:"id"`
+	Owner string `json:"owner"`
+}
+
+func (q *Queries) DeleteWallet(ctx context.Context, arg DeleteWalletParams) error {
+	_, err := q.exec(ctx, q.deleteWalletStmt, deleteWallet, arg.ID, arg.Owner)
 	return err
 }
 
