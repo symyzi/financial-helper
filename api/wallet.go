@@ -1,11 +1,13 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 	db "github.com/symyzi/financial-helper/db/gen"
+	"github.com/symyzi/financial-helper/token"
 )
 
 type createWalletRequest struct {
@@ -21,8 +23,9 @@ func (server *Server) createWallet(ctx *gin.Context) {
 		return
 	}
 
+	authPayLoad := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	arg := db.CreateWalletParams{
-		Owner:    req.Owner,
+		Owner:    authPayLoad.Username,
 		Name:     req.Name,
 		Currency: req.Currency,
 	}
@@ -60,6 +63,12 @@ func (server *Server) getWallet(ctx *gin.Context) {
 		return
 	}
 
+	authPayLoad := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	if wallet.Owner != authPayLoad.Username {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
 	ctx.JSON(http.StatusOK, wallet)
 }
 
@@ -76,8 +85,10 @@ func (server *Server) listWallets(ctx *gin.Context) {
 		return
 	}
 
+	authPayLoad := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
 	arg := db.ListWalletsParams{
-		Owner:  req.Owner,
+		Owner:  authPayLoad.Username,
 		Limit:  req.PageSize,
 		Offset: (req.PageID - 1) * req.PageSize,
 	}
@@ -90,7 +101,8 @@ func (server *Server) listWallets(ctx *gin.Context) {
 }
 
 type deleteWalletRequest struct {
-	ID int64 `uri:"id" binding:"required,min=1"`
+	ID    int64  `uri:"id" binding:"required,min=1"`
+	Owner string `json:"owner" binding:"required"`
 }
 
 func (server *Server) deleteWallet(ctx *gin.Context) {
@@ -100,12 +112,22 @@ func (server *Server) deleteWallet(ctx *gin.Context) {
 		return
 	}
 
-	err := server.store.DeleteWallet(ctx, req.ID)
+	authPayLoad := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	if authPayLoad.Username != req.Owner {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("unauthorized")))
+		return
+	}
+
+	arg := db.DeleteWalletParams{
+		ID:    req.ID,
+		Owner: req.Owner,
+	}
+
+	err := server.store.DeleteWallet(ctx, arg)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
 	ctx.JSON(http.StatusOK, nil)
-
 }

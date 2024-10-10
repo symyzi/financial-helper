@@ -34,10 +34,13 @@ func (server *Server) setupRouter() {
 	router := gin.Default()
 	router.POST("/users", server.createUser)
 	router.POST("/users/login", server.loginUser)
-	router.POST("/wallets", server.createWallet)
-	router.GET("/wallets/:id", server.getWallet)
-	router.GET("/wallets", server.listWallets)
-	router.DELETE("/wallets/:id", server.deleteWallet)
+
+	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
+
+	authRoutes.POST("/wallets", server.createWallet)
+	authRoutes.GET("/wallets/:id", server.getWallet)
+	authRoutes.GET("/wallets", server.listWallets)
+	authRoutes.DELETE("/wallets/:id", server.deleteWallet)
 	server.router = router
 }
 
