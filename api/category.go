@@ -1,27 +1,13 @@
 package api
 
-// import (
-// 	"net/http"
+import (
+	db "github.com/symyzi/financial-helper/db/gen"
+	"github.com/symyzi/financial-helper/util"
+)
 
-// 	"github.com/gin-gonic/gin"
-// )
-
-// type createCategoryRequest struct {
-// 	NameCategory string `json:"category" binding:"required"`
-// }
-
-// func (server *Server) createCategory(ctx *gin.Context) {
-// 	var req createCategoryRequest
-// 	if err := ctx.ShouldBindJSON(&req); err != nil {
-// 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-// 		return
-// 	}
-
-// 	category, err := server.store.CreateCategory(ctx, req.NameCategory)
-// 	if err != nil {
-// 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-// 		return
-// 	}
-
-// 	ctx.JSON(http.StatusOK, category)
-// }
+func RandomCategory() db.Category {
+	return db.Category{
+		ID:   util.RandomInt(1, 1000),
+		Name: util.RandomString(6),
+	}
+}

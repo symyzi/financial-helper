@@ -66,8 +66,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getCategoryByIDStmt, err = db.PrepareContext(ctx, getCategoryByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCategoryByID: %w", err)
 	}
-	if q.getExpenseByIDStmt, err = db.PrepareContext(ctx, getExpenseByID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetExpenseByID: %w", err)
+	if q.getExpenseStmt, err = db.PrepareContext(ctx, getExpense); err != nil {
+		return nil, fmt.Errorf("error preparing query GetExpense: %w", err)
 	}
 	if q.getUserStmt, err = db.PrepareContext(ctx, getUser); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUser: %w", err)
@@ -168,9 +168,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getCategoryByIDStmt: %w", cerr)
 		}
 	}
-	if q.getExpenseByIDStmt != nil {
-		if cerr := q.getExpenseByIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getExpenseByIDStmt: %w", cerr)
+	if q.getExpenseStmt != nil {
+		if cerr := q.getExpenseStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getExpenseStmt: %w", cerr)
 		}
 	}
 	if q.getUserStmt != nil {
@@ -266,7 +266,7 @@ type Queries struct {
 	getBudgetByIDStmt         *sql.Stmt
 	getBudgetsByWalletIDStmt  *sql.Stmt
 	getCategoryByIDStmt       *sql.Stmt
-	getExpenseByIDStmt        *sql.Stmt
+	getExpenseStmt            *sql.Stmt
 	getUserStmt               *sql.Stmt
 	getWalletStmt             *sql.Stmt
 	listExpensesStmt          *sql.Stmt
@@ -295,7 +295,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getBudgetByIDStmt:         q.getBudgetByIDStmt,
 		getBudgetsByWalletIDStmt:  q.getBudgetsByWalletIDStmt,
 		getCategoryByIDStmt:       q.getCategoryByIDStmt,
-		getExpenseByIDStmt:        q.getExpenseByIDStmt,
+		getExpenseStmt:            q.getExpenseStmt,
 		getUserStmt:               q.getUserStmt,
 		getWalletStmt:             q.getWalletStmt,
 		listExpensesStmt:          q.listExpensesStmt,

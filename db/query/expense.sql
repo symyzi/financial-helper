@@ -10,9 +10,9 @@ INSERT INTO expenses (
 )
 RETURNING *;
 
--- name: GetExpenseByID :one
+-- name: GetExpense :one
 SELECT * FROM expenses
-WHERE id = $1 LIMIT 1;
+WHERE id = $1 AND wallet_id = $2 LIMIT 1;
 
 -- name: ListExpenses :many
 SELECT * FROM expenses

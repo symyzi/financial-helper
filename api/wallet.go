@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"errors"
 	"net/http"
 
@@ -11,7 +12,6 @@ import (
 )
 
 type createWalletRequest struct {
-	Owner    string `json:"owner" binding:"required"`
 	Name     string `json:"name" binding:"required"`
 	Currency string `json:"currency" binding:"required,oneof=RUB USD EUR"`
 }
@@ -59,6 +59,10 @@ func (server *Server) getWallet(ctx *gin.Context) {
 
 	wallet, err := server.store.GetWallet(ctx, req.ID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -73,9 +77,8 @@ func (server *Server) getWallet(ctx *gin.Context) {
 }
 
 type listWalletsRequest struct {
-	Owner    string `form:"owner" binding:"required"`
-	PageID   int32  `form:"page_id" binding:"required,min=1"`
-	PageSize int32  `form:"page_size" binding:"required,min=5,max=10"`
+	PageID   int32 `form:"page_id" binding:"required,min=1"`
+	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
 }
 
 func (server *Server) listWallets(ctx *gin.Context) {
@@ -101,8 +104,7 @@ func (server *Server) listWallets(ctx *gin.Context) {
 }
 
 type deleteWalletRequest struct {
-	ID    int64  `uri:"id" binding:"required,min=1"`
-	Owner string `json:"owner" binding:"required"`
+	ID int64 `uri:"id" binding:"required,min=1"`
 }
 
 func (server *Server) deleteWallet(ctx *gin.Context) {
@@ -112,18 +114,28 @@ func (server *Server) deleteWallet(ctx *gin.Context) {
 		return
 	}
 
+	wallet, err := server.store.GetWallet(ctx, req.ID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
 	authPayLoad := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
-	if authPayLoad.Username != req.Owner {
+	if wallet.Owner != authPayLoad.Username {
 		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("unauthorized")))
 		return
 	}
 
 	arg := db.DeleteWalletParams{
 		ID:    req.ID,
-		Owner: req.Owner,
+		Owner: authPayLoad.Username,
 	}
 
-	err := server.store.DeleteWallet(ctx, arg)
+	err = server.store.DeleteWallet(ctx, arg)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
