@@ -40,7 +40,11 @@ func TestGetExpenseByID(t *testing.T) {
 	wallet := CreateRandomWallet(t, CreateRandomUser(t))
 	category := CreateRandomCategory(t)
 	expense1 := CreateRandomExpense(t, wallet, category)
-	expense2, err := testQueries.GetExpenseByID(context.Background(), expense1.ID)
+	arg := GetExpenseParams{
+		ID:       expense1.ID,
+		WalletID: wallet.ID,
+	}
+	expense2, err := testQueries.GetExpense(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, expense2)
 	require.Equal(t, expense1.ID, expense2.ID)
@@ -58,7 +62,11 @@ func TestDeleteExpense(t *testing.T) {
 	expense1 := CreateRandomExpense(t, wallet, category)
 	err := testQueries.DeleteExpense(context.Background(), expense1.ID)
 	require.NoError(t, err)
-	expense2, err := testQueries.GetExpenseByID(context.Background(), expense1.ID)
+	arg := GetExpenseParams{
+		ID:       expense1.ID,
+		WalletID: wallet.ID,
+	}
+	expense2, err := testQueries.GetExpense(context.Background(), arg)
 	require.Error(t, err)
 	require.EqualError(t, err, sql.ErrNoRows.Error())
 	require.Empty(t, expense2)

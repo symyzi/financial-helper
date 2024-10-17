@@ -63,13 +63,18 @@ func (q *Queries) DeleteExpense(ctx context.Context, id int64) error {
 	return err
 }
 
-const getExpenseByID = `-- name: GetExpenseByID :one
+const getExpense = `-- name: GetExpense :one
 SELECT id, wallet_id, amount, expense_description, category_id, expense_date, created_at FROM expenses
-WHERE id = $1 LIMIT 1
+WHERE id = $1 AND wallet_id = $2 LIMIT 1
 `
 
-func (q *Queries) GetExpenseByID(ctx context.Context, id int64) (Expense, error) {
-	row := q.queryRow(ctx, q.getExpenseByIDStmt, getExpenseByID, id)
+type GetExpenseParams struct {
+	ID       int64 `json:"id"`
+	WalletID int64 `json:"wallet_id"`
+}
+
+func (q *Queries) GetExpense(ctx context.Context, arg GetExpenseParams) (Expense, error) {
+	row := q.queryRow(ctx, q.getExpenseStmt, getExpense, arg.ID, arg.WalletID)
 	var i Expense
 	err := row.Scan(
 		&i.ID,
