@@ -38,25 +38,23 @@ func (server *Server) setupRouter() {
 	authRoutes := router.Group("/")
 	authRoutes.Use(authMiddleware(server.tokenMaker))
 
-	walletRoutes := authRoutes.Group("/wallets")
+	authRoutes.POST("/wallets", server.createWallet)
+	authRoutes.GET("/wallets", server.listWallets)
+	authRoutes.GET("/wallets/:id", server.getWallet)
+	authRoutes.DELETE("/wallets/:id", server.deleteWallet)
 
-	walletRoutes.POST("/", server.createWallet)
-	walletRoutes.GET("/", server.listWallets)
-	walletRoutes.GET("/:walletID", server.getWallet)
-	walletRoutes.DELETE("/:walletID", server.deleteWallet)
+	walletRoutes := authRoutes.Group("/wallets/:id")
 
-	expenseRoutes := walletRoutes.Group("/:walletID/expenses")
+	walletRoutes.POST("/expenses", server.createExpense)
+	walletRoutes.GET("/expenses", server.listExpenses)
+	walletRoutes.GET("/expenses/:id", server.getExpense)
+	walletRoutes.DELETE("/expenses/:id", server.deleteExpense)
 
-	expenseRoutes.POST("/", server.createExpense)
-	expenseRoutes.GET("/", server.listExpenses)
-	expenseRoutes.GET("/:expenseID", server.getExpense)
-	// expenseRoutes.DELETE("/:expenseID", server.deleteExpense)
-
-	// budgetRoutes := walletRoutes.Group("/:walletID/budgets")
+	// budgetRoutes := walletRoutes.Group("/:id/budgets")
 	// budgetRoutes.POST("/", server.createBudget)
 	// budgetRoutes.GET("/", server.listBudgets)
-	// budgetRoutes.GET("/:budgetID", server.getBudget)
-	// budgetRoutes.DELETE("/:budgetID", server.deleteBudget)
+	// budgetRoutes.GET("/:id", server.getBudget)
+	// budgetRoutes.DELETE("/:id", server.deleteBudget)
 
 	server.router = router
 }

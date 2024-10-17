@@ -94,8 +94,8 @@ func (server *Server) listExpenses(ctx *gin.Context) {
 }
 
 type getExpenseRequest struct {
-	ID       int64 `uri:"id" binding:"required,min=1"`
 	WalletID int64 `uri:"wallet_id" binding:"required,min=1"`
+	ID       int64 `uri:"id" binding:"required,min=1"`
 }
 
 func (server *Server) getExpense(ctx *gin.Context) {
@@ -138,4 +138,44 @@ type deleteExpenseRequest struct {
 	WalletID int64 `uri:"wallet_id" binding:"required,min=1"`
 }
 
-// TODO: add delete expense
+func (server *Server) deleteExpense(ctx *gin.Context) {
+	var req deleteExpenseRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	authPayLoad := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	wallet, err := server.store.GetWallet(ctx, req.WalletID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, errorResponse(err))
+		return
+	}
+
+	if wallet.Owner != authPayLoad.Username {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("unauthorized")))
+		return
+	}
+
+	expense, err := server.store.GetExpense(ctx, db.GetExpenseParams{
+		ID:       req.ID,
+		WalletID: req.WalletID,
+	})
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(
+			http.StatusInternalServerError,
+			errorResponse(err),
+		)
+		return
+	}
+
+	err = server.store.DeleteExpense(ctx, req.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, expense)
+}

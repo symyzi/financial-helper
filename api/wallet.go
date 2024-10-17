@@ -57,6 +57,11 @@ func (server *Server) getWallet(ctx *gin.Context) {
 		return
 	}
 
+	if req.ID <= 0 {
+		ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("invalid wallet ID")))
+		return
+	}
+
 	wallet, err := server.store.GetWallet(ctx, req.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

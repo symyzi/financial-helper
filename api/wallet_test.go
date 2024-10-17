@@ -51,8 +51,8 @@ func TestGetWalletAPI(t *testing.T) {
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
-					Times(1).
-					Return(wallet, nil)
+					Return(wallet, nil).
+					Times(1)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, recorder.Code)
@@ -188,6 +188,7 @@ func TestCreateWalletAPI(t *testing.T) {
 					Name:     wallet.Name,
 					Currency: wallet.Currency,
 				}
+
 				store.EXPECT().
 					CreateWallet(gomock.Any(), gomock.Eq(arg)).
 					Times(1).
