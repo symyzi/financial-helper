@@ -50,11 +50,10 @@ func (server *Server) setupRouter() {
 	walletRoutes.GET("/expenses/:id", server.getExpense)
 	walletRoutes.DELETE("/expenses/:id", server.deleteExpense)
 
-	// budgetRoutes := walletRoutes.Group("/:id/budgets")
-	// budgetRoutes.POST("/", server.createBudget)
-	// budgetRoutes.GET("/", server.listBudgets)
-	// budgetRoutes.GET("/:id", server.getBudget)
-	// budgetRoutes.DELETE("/:id", server.deleteBudget)
+	walletRoutes.POST("/budgets", server.createBudget)
+	walletRoutes.GET("/budgets", server.listBudgets)
+	walletRoutes.GET("/budgets/:id", server.getBudget)
+	walletRoutes.DELETE("/budgets/:id", server.deleteBudget)
 
 	server.router = router
 }

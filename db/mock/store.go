@@ -181,21 +181,6 @@ func (mr *MockStoreMockRecorder) GetAllCategories(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllCategories", reflect.TypeOf((*MockStore)(nil).GetAllCategories), arg0)
 }
 
-// GetBudgetByCategoryID mocks base method.
-func (m *MockStore) GetBudgetByCategoryID(arg0 context.Context, arg1 int64) (db.Budget, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBudgetByCategoryID", arg0, arg1)
-	ret0, _ := ret[0].(db.Budget)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetBudgetByCategoryID indicates an expected call of GetBudgetByCategoryID.
-func (mr *MockStoreMockRecorder) GetBudgetByCategoryID(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBudgetByCategoryID", reflect.TypeOf((*MockStore)(nil).GetBudgetByCategoryID), arg0, arg1)
-}
-
 // GetBudgetByID mocks base method.
 func (m *MockStore) GetBudgetByID(arg0 context.Context, arg1 int64) (db.Budget, error) {
 	m.ctrl.T.Helper()
@@ -209,21 +194,6 @@ func (m *MockStore) GetBudgetByID(arg0 context.Context, arg1 int64) (db.Budget, 
 func (mr *MockStoreMockRecorder) GetBudgetByID(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBudgetByID", reflect.TypeOf((*MockStore)(nil).GetBudgetByID), arg0, arg1)
-}
-
-// GetBudgetsByWalletID mocks base method.
-func (m *MockStore) GetBudgetsByWalletID(arg0 context.Context, arg1 int64) ([]db.Budget, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBudgetsByWalletID", arg0, arg1)
-	ret0, _ := ret[0].([]db.Budget)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetBudgetsByWalletID indicates an expected call of GetBudgetsByWalletID.
-func (mr *MockStoreMockRecorder) GetBudgetsByWalletID(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBudgetsByWalletID", reflect.TypeOf((*MockStore)(nil).GetBudgetsByWalletID), arg0, arg1)
 }
 
 // GetCategoryByID mocks base method.
@@ -242,7 +212,7 @@ func (mr *MockStoreMockRecorder) GetCategoryByID(arg0, arg1 interface{}) *gomock
 }
 
 // GetExpense mocks base method.
-func (m *MockStore) GetExpense(arg0 context.Context, arg1 db.GetExpenseParams) (db.Expense, error) {
+func (m *MockStore) GetExpense(arg0 context.Context, arg1 int64) (db.Expense, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetExpense", arg0, arg1)
 	ret0, _ := ret[0].(db.Expense)
@@ -284,6 +254,21 @@ func (m *MockStore) GetWallet(arg0 context.Context, arg1 int64) (db.Wallet, erro
 func (mr *MockStoreMockRecorder) GetWallet(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWallet", reflect.TypeOf((*MockStore)(nil).GetWallet), arg0, arg1)
+}
+
+// ListBudgets mocks base method.
+func (m *MockStore) ListBudgets(arg0 context.Context, arg1 db.ListBudgetsParams) ([]db.Budget, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBudgets", arg0, arg1)
+	ret0, _ := ret[0].([]db.Budget)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListBudgets indicates an expected call of ListBudgets.
+func (mr *MockStoreMockRecorder) ListBudgets(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBudgets", reflect.TypeOf((*MockStore)(nil).ListBudgets), arg0, arg1)
 }
 
 // ListExpenses mocks base method.

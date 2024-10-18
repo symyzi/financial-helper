@@ -54,14 +54,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getAllCategoriesStmt, err = db.PrepareContext(ctx, getAllCategories); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAllCategories: %w", err)
 	}
-	if q.getBudgetByCategoryIDStmt, err = db.PrepareContext(ctx, getBudgetByCategoryID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetBudgetByCategoryID: %w", err)
-	}
 	if q.getBudgetByIDStmt, err = db.PrepareContext(ctx, getBudgetByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetBudgetByID: %w", err)
-	}
-	if q.getBudgetsByWalletIDStmt, err = db.PrepareContext(ctx, getBudgetsByWalletID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetBudgetsByWalletID: %w", err)
 	}
 	if q.getCategoryByIDStmt, err = db.PrepareContext(ctx, getCategoryByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCategoryByID: %w", err)
@@ -74,6 +68,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getWalletStmt, err = db.PrepareContext(ctx, getWallet); err != nil {
 		return nil, fmt.Errorf("error preparing query GetWallet: %w", err)
+	}
+	if q.listBudgetsStmt, err = db.PrepareContext(ctx, listBudgets); err != nil {
+		return nil, fmt.Errorf("error preparing query ListBudgets: %w", err)
 	}
 	if q.listExpensesStmt, err = db.PrepareContext(ctx, listExpenses); err != nil {
 		return nil, fmt.Errorf("error preparing query ListExpenses: %w", err)
@@ -148,19 +145,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getAllCategoriesStmt: %w", cerr)
 		}
 	}
-	if q.getBudgetByCategoryIDStmt != nil {
-		if cerr := q.getBudgetByCategoryIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getBudgetByCategoryIDStmt: %w", cerr)
-		}
-	}
 	if q.getBudgetByIDStmt != nil {
 		if cerr := q.getBudgetByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getBudgetByIDStmt: %w", cerr)
-		}
-	}
-	if q.getBudgetsByWalletIDStmt != nil {
-		if cerr := q.getBudgetsByWalletIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getBudgetsByWalletIDStmt: %w", cerr)
 		}
 	}
 	if q.getCategoryByIDStmt != nil {
@@ -181,6 +168,11 @@ func (q *Queries) Close() error {
 	if q.getWalletStmt != nil {
 		if cerr := q.getWalletStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getWalletStmt: %w", cerr)
+		}
+	}
+	if q.listBudgetsStmt != nil {
+		if cerr := q.listBudgetsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listBudgetsStmt: %w", cerr)
 		}
 	}
 	if q.listExpensesStmt != nil {
@@ -250,59 +242,57 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                        DBTX
-	tx                        *sql.Tx
-	createBudgetStmt          *sql.Stmt
-	createCategoryStmt        *sql.Stmt
-	createExpenseStmt         *sql.Stmt
-	createUserStmt            *sql.Stmt
-	createWalletStmt          *sql.Stmt
-	deleteBudgetStmt          *sql.Stmt
-	deleteCategoryStmt        *sql.Stmt
-	deleteExpenseStmt         *sql.Stmt
-	deleteWalletStmt          *sql.Stmt
-	getAllCategoriesStmt      *sql.Stmt
-	getBudgetByCategoryIDStmt *sql.Stmt
-	getBudgetByIDStmt         *sql.Stmt
-	getBudgetsByWalletIDStmt  *sql.Stmt
-	getCategoryByIDStmt       *sql.Stmt
-	getExpenseStmt            *sql.Stmt
-	getUserStmt               *sql.Stmt
-	getWalletStmt             *sql.Stmt
-	listExpensesStmt          *sql.Stmt
-	listWalletsStmt           *sql.Stmt
-	updateBudgetStmt          *sql.Stmt
-	updateCategoryStmt        *sql.Stmt
-	updateExpenseStmt         *sql.Stmt
-	updateUserStmt            *sql.Stmt
+	db                   DBTX
+	tx                   *sql.Tx
+	createBudgetStmt     *sql.Stmt
+	createCategoryStmt   *sql.Stmt
+	createExpenseStmt    *sql.Stmt
+	createUserStmt       *sql.Stmt
+	createWalletStmt     *sql.Stmt
+	deleteBudgetStmt     *sql.Stmt
+	deleteCategoryStmt   *sql.Stmt
+	deleteExpenseStmt    *sql.Stmt
+	deleteWalletStmt     *sql.Stmt
+	getAllCategoriesStmt *sql.Stmt
+	getBudgetByIDStmt    *sql.Stmt
+	getCategoryByIDStmt  *sql.Stmt
+	getExpenseStmt       *sql.Stmt
+	getUserStmt          *sql.Stmt
+	getWalletStmt        *sql.Stmt
+	listBudgetsStmt      *sql.Stmt
+	listExpensesStmt     *sql.Stmt
+	listWalletsStmt      *sql.Stmt
+	updateBudgetStmt     *sql.Stmt
+	updateCategoryStmt   *sql.Stmt
+	updateExpenseStmt    *sql.Stmt
+	updateUserStmt       *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                        tx,
-		tx:                        tx,
-		createBudgetStmt:          q.createBudgetStmt,
-		createCategoryStmt:        q.createCategoryStmt,
-		createExpenseStmt:         q.createExpenseStmt,
-		createUserStmt:            q.createUserStmt,
-		createWalletStmt:          q.createWalletStmt,
-		deleteBudgetStmt:          q.deleteBudgetStmt,
-		deleteCategoryStmt:        q.deleteCategoryStmt,
-		deleteExpenseStmt:         q.deleteExpenseStmt,
-		deleteWalletStmt:          q.deleteWalletStmt,
-		getAllCategoriesStmt:      q.getAllCategoriesStmt,
-		getBudgetByCategoryIDStmt: q.getBudgetByCategoryIDStmt,
-		getBudgetByIDStmt:         q.getBudgetByIDStmt,
-		getBudgetsByWalletIDStmt:  q.getBudgetsByWalletIDStmt,
-		getCategoryByIDStmt:       q.getCategoryByIDStmt,
-		getExpenseStmt:            q.getExpenseStmt,
-		getUserStmt:               q.getUserStmt,
-		getWalletStmt:             q.getWalletStmt,
-		listExpensesStmt:          q.listExpensesStmt,
-		listWalletsStmt:           q.listWalletsStmt,
-		updateBudgetStmt:          q.updateBudgetStmt,
-		updateCategoryStmt:        q.updateCategoryStmt,
-		updateExpenseStmt:         q.updateExpenseStmt,
-		updateUserStmt:            q.updateUserStmt,
+		db:                   tx,
+		tx:                   tx,
+		createBudgetStmt:     q.createBudgetStmt,
+		createCategoryStmt:   q.createCategoryStmt,
+		createExpenseStmt:    q.createExpenseStmt,
+		createUserStmt:       q.createUserStmt,
+		createWalletStmt:     q.createWalletStmt,
+		deleteBudgetStmt:     q.deleteBudgetStmt,
+		deleteCategoryStmt:   q.deleteCategoryStmt,
+		deleteExpenseStmt:    q.deleteExpenseStmt,
+		deleteWalletStmt:     q.deleteWalletStmt,
+		getAllCategoriesStmt: q.getAllCategoriesStmt,
+		getBudgetByIDStmt:    q.getBudgetByIDStmt,
+		getCategoryByIDStmt:  q.getCategoryByIDStmt,
+		getExpenseStmt:       q.getExpenseStmt,
+		getUserStmt:          q.getUserStmt,
+		getWalletStmt:        q.getWalletStmt,
+		listBudgetsStmt:      q.listBudgetsStmt,
+		listExpensesStmt:     q.listExpensesStmt,
+		listWalletsStmt:      q.listWalletsStmt,
+		updateBudgetStmt:     q.updateBudgetStmt,
+		updateCategoryStmt:   q.updateCategoryStmt,
+		updateExpenseStmt:    q.updateExpenseStmt,
+		updateUserStmt:       q.updateUserStmt,
 	}
 }

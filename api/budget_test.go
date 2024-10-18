@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
-	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 	db "github.com/symyzi/financial-helper/db/gen"
 	mockdb "github.com/symyzi/financial-helper/db/mock"
@@ -22,253 +20,156 @@ import (
 	"github.com/symyzi/financial-helper/util"
 )
 
-func RandomWallet(owner string) db.Wallet {
-	return db.Wallet{
-		ID:       util.RandomInt(1, 1000),
-		Owner:    owner,
-		Name:     util.RandomString(6),
-		Currency: util.RandomCurrency(),
-	}
-}
-
-func TestGetWalletAPI(t *testing.T) {
+func TestCreateBudgetAPI(t *testing.T) {
 	user, _ := randomUser(t)
 	wallet := RandomWallet(user.Username)
+	category := RandomCategory()
+	budget := RandomBudget(wallet.ID, category.ID)
 
 	testCases := []struct {
 		name          string
-		walletID      int64
+		body          gin.H
 		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
 		buildStubs    func(store *mockdb.MockStore)
-		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
+		checkResponse func(recoder *httptest.ResponseRecorder)
 	}{
 		{
-			name:     "OK",
-			walletID: wallet.ID,
+			name: "OK",
+			body: gin.H{
+				"wallet_id":   budget.WalletID,
+				"amount":      budget.Amount,
+				"category_id": budget.CategoryID,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+
+				store.EXPECT().
+					GetWallet(gomock.Any(), gomock.Eq(budget.WalletID)).
+					Times(1).
+					Return(wallet, nil)
+
+				arg := db.CreateBudgetParams{
+					WalletID:   budget.WalletID,
+					Amount:     budget.Amount,
+					CategoryID: budget.CategoryID,
+				}
+				store.EXPECT().
+					CreateBudget(gomock.Any(), gomock.Eq(arg)).
+					Times(1).
+					Return(budget, nil)
+			},
+			checkResponse: func(recoder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recoder.Code)
+			},
+		},
+		{
+			name: "InternalError",
+			body: gin.H{
+				"wallet_id":   budget.WalletID,
+				"amount":      budget.Amount,
+				"category_id": budget.CategoryID,
+			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
-					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
-					Return(wallet, nil).
-					Times(1)
-			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusOK, recorder.Code)
-				requireBodyMatchAccount(t, recorder.Body, wallet)
-			},
-		},
-		{
-			name:     "UnauthorizedUser",
-			walletID: wallet.ID,
-			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "unauthorized_user", time.Minute)
-			},
-			buildStubs: func(store *mockdb.MockStore) {
-				store.EXPECT().
-					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
+					GetWallet(gomock.Any(), gomock.Eq(budget.WalletID)).
 					Times(1).
-					Return(db.Wallet{}, nil)
-			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusUnauthorized, recorder.Code)
-			},
-		},
-		{
-			name:     "NoAuthorization",
-			walletID: wallet.ID,
-			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-			},
-			buildStubs: func(store *mockdb.MockStore) {
+					Return(wallet, nil)
 				store.EXPECT().
-					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
-					Times(0)
-			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusUnauthorized, recorder.Code)
-			},
-		},
-		{
-			name:     "NotFound",
-			walletID: wallet.ID,
-			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
-			},
-			buildStubs: func(store *mockdb.MockStore) {
-				store.EXPECT().
-					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
+					CreateBudget(gomock.Any(), gomock.Any()).
 					Times(1).
-					Return(db.Wallet{}, sql.ErrNoRows)
+					Return(db.Budget{}, sql.ErrConnDone)
 			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusNotFound, recorder.Code)
+			checkResponse: func(recoder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recoder.Code)
 			},
 		},
 		{
-			name:     "InternalError",
-			walletID: wallet.ID,
+			name: "UnauthorizedUser",
+			body: gin.H{
+				"wallet_id":   budget.WalletID,
+				"amount":      budget.Amount,
+				"category_id": budget.CategoryID,
+			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "unauthorized_user1", time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
-					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
-					Times(1).
-					Return(db.Wallet{}, sql.ErrConnDone)
+					GetWallet(gomock.Any(), gomock.Eq(budget.WalletID)).
+					AnyTimes().
+					Return(wallet, nil)
+
+				arg := db.CreateBudgetParams{
+					WalletID:   budget.WalletID,
+					Amount:     budget.Amount,
+					CategoryID: budget.CategoryID,
+				}
+
+				store.EXPECT().
+					CreateBudget(gomock.Any(), gomock.Eq(arg)).
+					AnyTimes().
+					Return(db.Budget{}, sql.ErrConnDone)
 			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+
+			checkResponse: func(recoder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusUnauthorized, recoder.Code)
 			},
 		},
 		{
-			name:     "InvalidID",
-			walletID: 0,
+			name: "InvalidWalletID",
+			body: gin.H{
+				"wallet_id":   0,
+				"amount":      budget.Amount,
+				"category_id": budget.CategoryID,
+			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetWallet(gomock.Any(), gomock.Any()).
-					Times(0)
+					AnyTimes().
+					Return(db.Wallet{}, sql.ErrNoRows)
+
 			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			checkResponse: func(recoder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotFound, recoder.Code)
 			},
 		},
-	}
-
-	for i := range testCases {
-		tc := testCases[i]
-
-		t.Run(tc.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			store := mockdb.NewMockStore(ctrl)
-			tc.buildStubs(store)
-
-			server := newTestServer(t, store)
-			recorder := httptest.NewRecorder()
-
-			url := fmt.Sprintf("/wallets/%d", tc.walletID)
-			request, err := http.NewRequest(http.MethodGet, url, nil)
-			require.NoError(t, err)
-
-			tc.setupAuth(t, request, server.tokenMaker)
-			server.router.ServeHTTP(recorder, request)
-			tc.checkResponse(t, recorder)
-		})
-	}
-
-}
-
-func TestCreateWalletAPI(t *testing.T) {
-	user, _ := randomUser(t)
-	wallet := RandomWallet(user.Username)
-	testCases := []struct {
-		name          string
-		body          gin.H
-		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
-		buildStubs    func(store *mockdb.MockStore)
-		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
-	}{
 		{
-			name: "OK",
+			name: "InvalidAmount",
 			body: gin.H{
-				"name":     wallet.Name,
-				"currency": wallet.Currency,
+				"wallet_id":   budget.WalletID,
+				"amount":      "dfs",
+				"category_id": budget.CategoryID,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
-				arg := db.CreateWalletParams{
-					Owner:    user.Username,
-					Name:     wallet.Name,
-					Currency: wallet.Currency,
+				store.EXPECT().
+					GetWallet(gomock.Any(), gomock.Eq(budget.WalletID)).
+					AnyTimes().
+					Return(wallet, nil)
+
+				arg := db.CreateBudgetParams{
+					WalletID:   budget.WalletID,
+					Amount:     budget.Amount,
+					CategoryID: budget.CategoryID,
 				}
 
 				store.EXPECT().
-					CreateWallet(gomock.Any(), gomock.Eq(arg)).
-					Times(1).
-					Return(wallet, nil)
+					CreateBudget(gomock.Any(), gomock.Eq(arg)).
+					AnyTimes().
+					Return(db.Budget{}, sql.ErrConnDone)
 			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusOK, recorder.Code)
-				requireBodyMatchAccount(t, recorder.Body, wallet)
-			},
-		},
-		{
-			name: "InternalError",
-			body: gin.H{
-				"name":     wallet.Name,
-				"currency": wallet.Currency,
-			},
-			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
-			},
-			buildStubs: func(store *mockdb.MockStore) {
-				store.EXPECT().
-					CreateWallet(gomock.Any(), gomock.Any()).
-					Times(1).
-					Return(db.Wallet{}, sql.ErrConnDone)
-			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusInternalServerError, recorder.Code)
-			},
-		},
-		{
-			name: "NoAuthorization",
-			body: gin.H{
-				"name":     wallet.Name,
-				"currency": wallet.Currency,
-			},
-			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-			},
-			buildStubs: func(store *mockdb.MockStore) {
-				store.EXPECT().
-					CreateWallet(gomock.Any(), gomock.Any()).
-					Times(0)
-			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusUnauthorized, recorder.Code)
-			},
-		},
-		{
-			name: "BadRequest",
-			body: gin.H{
-				"name": wallet.Name,
-			},
-			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
-			},
-			buildStubs: func(store *mockdb.MockStore) {
-				store.EXPECT().
-					CreateWallet(gomock.Any(), gomock.Any()).
-					Times(0)
-			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusBadRequest, recorder.Code)
-			},
-		},
-		{
-			name: "ForeignKeyError",
-			body: gin.H{
-				"name":     wallet.Name,
-				"currency": wallet.Currency,
-			},
-			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
-			},
-			buildStubs: func(store *mockdb.MockStore) {
-				store.EXPECT().
-					CreateWallet(gomock.Any(), gomock.Any()).
-					Times(1).
-					Return(db.Wallet{}, &pq.Error{Code: "23503"})
-			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusForbidden, recorder.Code)
+			checkResponse: func(recoder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recoder.Code)
 			},
 		},
 	}
@@ -288,24 +189,166 @@ func TestCreateWalletAPI(t *testing.T) {
 			data, err := json.Marshal(tc.body)
 			require.NoError(t, err)
 
-			request, err := http.NewRequest(http.MethodPost, "/wallets", bytes.NewReader(data))
+			url := fmt.Sprintf("/wallets/%d/budgets", wallet.ID)
+			request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(data))
 			require.NoError(t, err)
 
 			tc.setupAuth(t, request, server.tokenMaker)
 			server.router.ServeHTTP(recorder, request)
-			tc.checkResponse(t, recorder)
+			tc.checkResponse(recorder)
+		})
+	}
+
+}
+
+func TestGetBudgetByID(t *testing.T) {
+	user, _ := randomUser(t)
+	wallet := RandomWallet(user.Username)
+	category := RandomCategory()
+	budget := RandomBudget(wallet.ID, category.ID)
+
+	testCases := []struct {
+		name          string
+		budgetID      int64
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
+		buildStubs    func(store *mockdb.MockStore)
+		checkResponse func(recoder *httptest.ResponseRecorder)
+	}{
+		{
+			name:     "OK",
+			budgetID: budget.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
+					Times(1).
+					Return(wallet, nil)
+
+				store.EXPECT().
+					GetBudgetByID(gomock.Any(), gomock.Eq(budget.ID)).
+					Times(1).
+					Return(budget, nil)
+			},
+
+			checkResponse: func(recoder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recoder.Code)
+				requireBodyMatchBudget(t, recoder.Body, budget)
+			},
+		},
+		{
+			name:     "Unauthorized",
+			budgetID: budget.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "unauthorized_user", time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
+					Times(1).
+					Return(wallet, nil)
+
+				store.EXPECT().
+					GetBudgetByID(gomock.Any(), gomock.Eq(budget.ID)).
+					Times(1).
+					Return(budget, nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusUnauthorized, recorder.Code)
+			},
+		},
+		{
+			name:     "NotFound",
+			budgetID: budget.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
+					AnyTimes().
+					Return(db.Wallet{}, sql.ErrNoRows)
+
+				store.EXPECT().
+					GetBudgetByID(gomock.Any(), gomock.Eq(budget.ID)).
+					Times(1).
+					Return(db.Budget{}, sql.ErrNoRows)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotFound, recorder.Code)
+			},
+		},
+		{
+			name:     "InternalError",
+			budgetID: budget.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
+					Return(wallet, nil).
+					AnyTimes()
+
+				store.EXPECT().
+					GetBudgetByID(gomock.Any(), gomock.Eq(budget.ID)).
+					Times(1).
+					Return(db.Budget{}, sql.ErrConnDone)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:     "InvalidID",
+			budgetID: 0,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetWallet(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+	}
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+
+			server := newTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			url := fmt.Sprintf("/wallets/%d/budgets/%d", wallet.ID, tc.budgetID)
+			request, err := http.NewRequest(http.MethodGet, url, nil)
+			require.NoError(t, err)
+
+			tc.setupAuth(t, request, server.tokenMaker)
+			server.router.ServeHTTP(recorder, request)
+			tc.checkResponse(recorder)
 		})
 	}
 }
 
-func TestListWalletsAPI(t *testing.T) {
+func TestListBudgetsAPI(t *testing.T) {
 	user, _ := randomUser(t)
+	wallet := RandomWallet(user.Username)
+	category := RandomCategory()
 	n := 5
 
-	wallets := make([]db.Wallet, n)
+	budgets := make([]db.Budget, n)
 
 	for i := 0; i < n; i++ {
-		wallets[i] = RandomWallet(user.Username)
+		budgets[i] = RandomBudget(wallet.ID, category.ID)
 	}
 
 	type Query struct {
@@ -330,20 +373,25 @@ func TestListWalletsAPI(t *testing.T) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
-				arg := db.ListWalletsParams{
-					Owner:  user.Username,
+
+				store.EXPECT().
+					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
+					AnyTimes().
+					Return(wallet, nil)
+
+				arg := db.ListBudgetsParams{
 					Limit:  int32(n),
 					Offset: 0,
 				}
 
 				store.EXPECT().
-					ListWallets(gomock.Any(), gomock.Eq(arg)).
+					ListBudgets(gomock.Any(), gomock.Eq(arg)).
 					Times(1).
-					Return(wallets, nil)
+					Return(budgets, nil)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, recorder.Code)
-				requireBodyMatchAccounts(t, recorder.Body, wallets)
+				requireBodyMatchBudgets(t, recorder.Body, budgets)
 			},
 		},
 		{
@@ -356,7 +404,7 @@ func TestListWalletsAPI(t *testing.T) {
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
-					ListWallets(gomock.Any(), gomock.Any()).
+					GetWallet(gomock.Any(), gomock.Any()).
 					Times(0)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
@@ -374,10 +422,14 @@ func TestListWalletsAPI(t *testing.T) {
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
-					ListWallets(gomock.Any(), gomock.Any()).
-					Times(1).
-					Return([]db.Wallet{}, sql.ErrConnDone)
+					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
+					AnyTimes().
+					Return(wallet, nil)
 
+				store.EXPECT().
+					ListBudgets(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return([]db.Budget{}, sql.ErrConnDone)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, recorder.Code)
@@ -394,8 +446,14 @@ func TestListWalletsAPI(t *testing.T) {
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
-					ListWallets(gomock.Any(), gomock.Any()).
+					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
+					AnyTimes().
+					Return(wallet, nil)
+
+				store.EXPECT().
+					ListBudgets(gomock.Any(), gomock.Any()).
 					Times(0)
+
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, recorder.Code)
@@ -412,7 +470,12 @@ func TestListWalletsAPI(t *testing.T) {
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
-					ListWallets(gomock.Any(), gomock.Any()).
+					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
+					AnyTimes().
+					Return(wallet, nil)
+
+				store.EXPECT().
+					ListBudgets(gomock.Any(), gomock.Any()).
 					Times(0)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
@@ -434,7 +497,7 @@ func TestListWalletsAPI(t *testing.T) {
 			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
-			url := "/wallets"
+			url := fmt.Sprintf("/wallets/%d/budgets", wallet.ID)
 			request, err := http.NewRequest(http.MethodGet, url, nil)
 			require.NoError(t, err)
 
@@ -450,20 +513,21 @@ func TestListWalletsAPI(t *testing.T) {
 	}
 }
 
-func TestDeleteWalletAPI(t *testing.T) {
+func TestDeleteBudgetAPI(t *testing.T) {
 	user, _ := randomUser(t)
 	wallet := RandomWallet(user.Username)
+	budget := RandomBudget(wallet.ID, RandomCategory().ID)
 
 	testCases := []struct {
 		name          string
-		walletID      int64
+		budgetID      int64
 		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
 		buildStubs    func(store *mockdb.MockStore)
-		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
+		checkResponse func(recorder *httptest.ResponseRecorder)
 	}{
 		{
 			name:     "OK",
-			walletID: wallet.ID,
+			budgetID: budget.ID,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
 			},
@@ -474,36 +538,22 @@ func TestDeleteWalletAPI(t *testing.T) {
 					Return(wallet, nil)
 
 				store.EXPECT().
-					DeleteWallet(gomock.Any(), gomock.Eq(db.DeleteWalletParams{
-						ID:    wallet.ID,
-						Owner: user.Username,
-					})).
+					GetBudgetByID(gomock.Any(), gomock.Eq(budget.ID)).
+					Times(1).
+					Return(budget, nil)
+
+				store.EXPECT().
+					DeleteBudget(gomock.Any(), gomock.Eq(budget.ID)).
 					Times(1).
 					Return(nil)
 			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, recorder.Code)
 			},
 		},
 		{
-			name:     "NotFound",
-			walletID: wallet.ID,
-			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
-			},
-			buildStubs: func(store *mockdb.MockStore) {
-				store.EXPECT().
-					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
-					Times(1).
-					Return(wallet, sql.ErrNoRows)
-			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusNotFound, recorder.Code)
-			},
-		},
-		{
 			name:     "Unauthorized",
-			walletID: wallet.ID,
+			budgetID: budget.ID,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "unauthorized_user", time.Minute)
 			},
@@ -512,14 +562,40 @@ func TestDeleteWalletAPI(t *testing.T) {
 					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
 					Times(1).
 					Return(wallet, nil)
+
+				store.EXPECT().
+					GetBudgetByID(gomock.Any(), gomock.Eq(budget.ID)).
+					Times(1).
+					Return(budget, nil)
 			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusUnauthorized, recorder.Code)
 			},
 		},
 		{
+			name:     "NotFound",
+			budgetID: budget.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetWallet(gomock.Any(), gomock.Eq(wallet.ID)).
+					AnyTimes().
+					Return(wallet, nil)
+
+				store.EXPECT().
+					GetBudgetByID(gomock.Any(), gomock.Eq(budget.ID)).
+					Times(1).
+					Return(db.Budget{}, sql.ErrNoRows)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotFound, recorder.Code)
+			},
+		},
+		{
 			name:     "InternalError",
-			walletID: wallet.ID,
+			budgetID: budget.ID,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
 			},
@@ -529,23 +605,23 @@ func TestDeleteWalletAPI(t *testing.T) {
 					Times(1).
 					Return(wallet, nil)
 
-				// Здесь мы заставляем deleteWallet вернуть ошибку
 				store.EXPECT().
-					DeleteWallet(gomock.Any(), gomock.Eq(db.DeleteWalletParams{
-						ID:    wallet.ID,
-						Owner: user.Username,
-					})).
+					GetBudgetByID(gomock.Any(), gomock.Eq(budget.ID)).
 					Times(1).
-					Return(errors.New("some error")) // Это вызывает ошибку
+					Return(budget, nil)
 
+				store.EXPECT().
+					DeleteBudget(gomock.Any(), gomock.Eq(budget.ID)).
+					Times(1).
+					Return(sql.ErrConnDone)
 			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusInternalServerError, recorder.Code) // Проверяем, что код 500
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
 			},
 		},
 		{
 			name:     "InvalidID",
-			walletID: 0,
+			budgetID: 0,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
 			},
@@ -554,7 +630,7 @@ func TestDeleteWalletAPI(t *testing.T) {
 					GetWallet(gomock.Any(), gomock.Any()).
 					Times(0)
 			},
-			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, recorder.Code)
 			},
 		},
@@ -562,7 +638,6 @@ func TestDeleteWalletAPI(t *testing.T) {
 
 	for i := range testCases {
 		tc := testCases[i]
-
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
@@ -573,33 +648,42 @@ func TestDeleteWalletAPI(t *testing.T) {
 			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
-			url := fmt.Sprintf("/wallets/%d", tc.walletID)
+			url := fmt.Sprintf("/wallets/%d/budgets/%d", wallet.ID, tc.budgetID)
 			request, err := http.NewRequest(http.MethodDelete, url, nil)
 			require.NoError(t, err)
 
 			tc.setupAuth(t, request, server.tokenMaker)
 			server.router.ServeHTTP(recorder, request)
-			tc.checkResponse(t, recorder)
+			tc.checkResponse(recorder)
 		})
 	}
 }
 
-func requireBodyMatchAccounts(t *testing.T, body *bytes.Buffer, accounts []db.Wallet) {
+func requireBodyMatchBudgets(t *testing.T, body *bytes.Buffer, budgets []db.Budget) {
 	data, err := io.ReadAll(body)
 	require.NoError(t, err)
 
-	var gotWallets []db.Wallet
-	err = json.Unmarshal(data, &gotWallets)
+	var gotBudgets []db.Budget
+	err = json.Unmarshal(data, &gotBudgets)
 	require.NoError(t, err)
-	require.Equal(t, accounts, gotWallets)
+	require.Equal(t, budgets, gotBudgets)
 }
 
-func requireBodyMatchAccount(t *testing.T, body *bytes.Buffer, account db.Wallet) {
+func requireBodyMatchBudget(t *testing.T, body *bytes.Buffer, budget db.Budget) {
 	data, err := io.ReadAll(body)
 	require.NoError(t, err)
 
-	var gotWallet db.Wallet
-	err = json.Unmarshal(data, &gotWallet)
+	var gotBudget db.Budget
+	err = json.Unmarshal(data, &gotBudget)
 	require.NoError(t, err)
-	require.Equal(t, account, gotWallet)
+	require.Equal(t, budget, gotBudget)
+}
+
+func RandomBudget(walletID int64, CategoryID int64) db.Budget {
+	return db.Budget{
+		ID:         util.RandomInt(1, 1000),
+		WalletID:   walletID,
+		Amount:     util.RandomInt(1, 1000),
+		CategoryID: CategoryID,
+	}
 }

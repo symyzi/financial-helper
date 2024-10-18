@@ -19,13 +19,12 @@ type Querier interface {
 	DeleteExpense(ctx context.Context, id int64) error
 	DeleteWallet(ctx context.Context, arg DeleteWalletParams) error
 	GetAllCategories(ctx context.Context) ([]Category, error)
-	GetBudgetByCategoryID(ctx context.Context, categoryID int64) (Budget, error)
 	GetBudgetByID(ctx context.Context, id int64) (Budget, error)
-	GetBudgetsByWalletID(ctx context.Context, walletID int64) ([]Budget, error)
 	GetCategoryByID(ctx context.Context, id int64) (Category, error)
-	GetExpense(ctx context.Context, arg GetExpenseParams) (Expense, error)
+	GetExpense(ctx context.Context, id int64) (Expense, error)
 	GetUser(ctx context.Context, username string) (User, error)
 	GetWallet(ctx context.Context, id int64) (Wallet, error)
+	ListBudgets(ctx context.Context, arg ListBudgetsParams) ([]Budget, error)
 	ListExpenses(ctx context.Context, arg ListExpensesParams) ([]Expense, error)
 	ListWallets(ctx context.Context, arg ListWalletsParams) ([]Wallet, error)
 	UpdateBudget(ctx context.Context, arg UpdateBudgetParams) (Budget, error)

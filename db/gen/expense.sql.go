@@ -7,8 +7,6 @@ package db
 
 import (
 	"context"
-	"database/sql"
-	"time"
 )
 
 const createExpense = `-- name: CreateExpense :one
@@ -16,20 +14,18 @@ INSERT INTO expenses (
     wallet_id,
     amount,
     expense_description,
-    category_id,
-    expense_date
+    category_id
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4
 )
-RETURNING id, wallet_id, amount, expense_description, category_id, expense_date, created_at
+RETURNING id, wallet_id, amount, expense_description, category_id, created_at
 `
 
 type CreateExpenseParams struct {
-	WalletID           int64          `json:"wallet_id"`
-	Amount             int64          `json:"amount"`
-	ExpenseDescription sql.NullString `json:"expense_description"`
-	CategoryID         int64          `json:"category_id"`
-	ExpenseDate        time.Time      `json:"expense_date"`
+	WalletID           int64  `json:"wallet_id"`
+	Amount             int64  `json:"amount"`
+	ExpenseDescription string `json:"expense_description"`
+	CategoryID         int64  `json:"category_id"`
 }
 
 func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (Expense, error) {
@@ -38,7 +34,6 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (E
 		arg.Amount,
 		arg.ExpenseDescription,
 		arg.CategoryID,
-		arg.ExpenseDate,
 	)
 	var i Expense
 	err := row.Scan(
@@ -47,7 +42,6 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (E
 		&i.Amount,
 		&i.ExpenseDescription,
 		&i.CategoryID,
-		&i.ExpenseDate,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -64,17 +58,12 @@ func (q *Queries) DeleteExpense(ctx context.Context, id int64) error {
 }
 
 const getExpense = `-- name: GetExpense :one
-SELECT id, wallet_id, amount, expense_description, category_id, expense_date, created_at FROM expenses
-WHERE id = $1 AND wallet_id = $2 LIMIT 1
+SELECT id, wallet_id, amount, expense_description, category_id, created_at FROM expenses
+WHERE id = $1 LIMIT 1
 `
 
-type GetExpenseParams struct {
-	ID       int64 `json:"id"`
-	WalletID int64 `json:"wallet_id"`
-}
-
-func (q *Queries) GetExpense(ctx context.Context, arg GetExpenseParams) (Expense, error) {
-	row := q.queryRow(ctx, q.getExpenseStmt, getExpense, arg.ID, arg.WalletID)
+func (q *Queries) GetExpense(ctx context.Context, id int64) (Expense, error) {
+	row := q.queryRow(ctx, q.getExpenseStmt, getExpense, id)
 	var i Expense
 	err := row.Scan(
 		&i.ID,
@@ -82,28 +71,24 @@ func (q *Queries) GetExpense(ctx context.Context, arg GetExpenseParams) (Expense
 		&i.Amount,
 		&i.ExpenseDescription,
 		&i.CategoryID,
-		&i.ExpenseDate,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listExpenses = `-- name: ListExpenses :many
-SELECT id, wallet_id, amount, expense_description, category_id, expense_date, created_at FROM expenses
-WHERE wallet_id = $1
-ORDER BY expense_date DESC
-LIMIT $2
-OFFSET $3
+SELECT id, wallet_id, amount, expense_description, category_id, created_at FROM expenses
+LIMIT $1
+OFFSET $2
 `
 
 type ListExpensesParams struct {
-	WalletID int64 `json:"wallet_id"`
-	Limit    int32 `json:"limit"`
-	Offset   int32 `json:"offset"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
 }
 
 func (q *Queries) ListExpenses(ctx context.Context, arg ListExpensesParams) ([]Expense, error) {
-	rows, err := q.query(ctx, q.listExpensesStmt, listExpenses, arg.WalletID, arg.Limit, arg.Offset)
+	rows, err := q.query(ctx, q.listExpensesStmt, listExpenses, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +102,6 @@ func (q *Queries) ListExpenses(ctx context.Context, arg ListExpensesParams) ([]E
 			&i.Amount,
 			&i.ExpenseDescription,
 			&i.CategoryID,
-			&i.ExpenseDate,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -135,17 +119,16 @@ func (q *Queries) ListExpenses(ctx context.Context, arg ListExpensesParams) ([]E
 
 const updateExpense = `-- name: UpdateExpense :one
 UPDATE expenses
-SET amount = $2, expense_description = $3, category_id = $4, expense_date = $5
+SET amount = $2, expense_description = $3, category_id = $4
 WHERE id = $1
-RETURNING id, wallet_id, amount, expense_description, category_id, expense_date, created_at
+RETURNING id, wallet_id, amount, expense_description, category_id, created_at
 `
 
 type UpdateExpenseParams struct {
-	ID                 int64          `json:"id"`
-	Amount             int64          `json:"amount"`
-	ExpenseDescription sql.NullString `json:"expense_description"`
-	CategoryID         int64          `json:"category_id"`
-	ExpenseDate        time.Time      `json:"expense_date"`
+	ID                 int64  `json:"id"`
+	Amount             int64  `json:"amount"`
+	ExpenseDescription string `json:"expense_description"`
+	CategoryID         int64  `json:"category_id"`
 }
 
 func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (Expense, error) {
@@ -154,7 +137,6 @@ func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (E
 		arg.Amount,
 		arg.ExpenseDescription,
 		arg.CategoryID,
-		arg.ExpenseDate,
 	)
 	var i Expense
 	err := row.Scan(
@@ -163,7 +145,6 @@ func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (E
 		&i.Amount,
 		&i.ExpenseDescription,
 		&i.CategoryID,
-		&i.ExpenseDate,
 		&i.CreatedAt,
 	)
 	return i, err
