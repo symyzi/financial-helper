@@ -1,4 +1,4 @@
-.PHONY: createdb dropdb postgres migrateup migratedown dockerstart dockerstop sqlc test server
+.PHONY: createdb dropdb postgres migrateup migratedown dockerstart dockerstop sqlc test server mock
 
 createdb:
 	docker exec -it postgres16 createdb --username=root --owner=root financial_helper
@@ -29,3 +29,6 @@ test:
 
 server:
 	go run main.go
+
+mock:
+	mockgen -package mockdb -destination db/mock/store.go github.com/symyzi/financial-helper/db/gen Store

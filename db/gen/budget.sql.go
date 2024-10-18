@@ -49,24 +49,6 @@ func (q *Queries) DeleteBudget(ctx context.Context, id int64) error {
 	return err
 }
 
-const getBudgetByCategoryID = `-- name: GetBudgetByCategoryID :one
-SELECT id, wallet_id, amount, category_id, created_at FROM budgets 
-WHERE category_id = $1
-`
-
-func (q *Queries) GetBudgetByCategoryID(ctx context.Context, categoryID int64) (Budget, error) {
-	row := q.queryRow(ctx, q.getBudgetByCategoryIDStmt, getBudgetByCategoryID, categoryID)
-	var i Budget
-	err := row.Scan(
-		&i.ID,
-		&i.WalletID,
-		&i.Amount,
-		&i.CategoryID,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const getBudgetByID = `-- name: GetBudgetByID :one
 SELECT id, wallet_id, amount, category_id, created_at FROM budgets 
 WHERE id = $1
@@ -85,14 +67,19 @@ func (q *Queries) GetBudgetByID(ctx context.Context, id int64) (Budget, error) {
 	return i, err
 }
 
-const getBudgetsByWalletID = `-- name: GetBudgetsByWalletID :many
-SELECT id, wallet_id, amount, category_id, created_at FROM budgets 
-WHERE wallet_id = $1 
-ORDER BY created_at DESC
+const listBudgets = `-- name: ListBudgets :many
+SELECT id, wallet_id, amount, category_id, created_at FROM budgets
+LIMIT $1
+OFFSET $2
 `
 
-func (q *Queries) GetBudgetsByWalletID(ctx context.Context, walletID int64) ([]Budget, error) {
-	rows, err := q.query(ctx, q.getBudgetsByWalletIDStmt, getBudgetsByWalletID, walletID)
+type ListBudgetsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListBudgets(ctx context.Context, arg ListBudgetsParams) ([]Budget, error) {
+	rows, err := q.query(ctx, q.listBudgetsStmt, listBudgets, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

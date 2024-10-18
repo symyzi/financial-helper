@@ -17,9 +17,8 @@ CREATE TABLE "expenses" (
   "id" bigserial PRIMARY KEY,
   "wallet_id" bigint NOT NULL,
   "amount" bigint NOT NULL,
-  "expense_description" varchar,
+  "expense_description" varchar NOT NULL,
   "category_id" bigint NOT NULL,
-  "expense_date" date NOT NULL,
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
@@ -42,10 +41,6 @@ CREATE TABLE "wallets" (
 CREATE INDEX ON "expenses" ("wallet_id");
 
 CREATE INDEX ON "expenses" ("category_id");
-
-CREATE INDEX ON "expenses" ("expense_date");
-
-CREATE INDEX ON "expenses" ("wallet_id", "expense_date");
 
 CREATE INDEX ON "budgets" ("wallet_id");
 

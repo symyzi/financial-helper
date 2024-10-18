@@ -53,7 +53,11 @@ func TestGetWallet(t *testing.T) {
 func TestDeleteWallet(t *testing.T) {
 	user := CreateRandomUser(t)
 	wallet1 := CreateRandomWallet(t, user)
-	err := testQueries.DeleteWallet(context.Background(), wallet1.ID)
+	arg := DeleteWalletParams{
+		ID:    wallet1.ID,
+		Owner: user.Username,
+	}
+	err := testQueries.DeleteWallet(context.Background(), arg)
 	require.NoError(t, err)
 
 	wallet2, err := testQueries.GetWallet(context.Background(), wallet1.ID)
