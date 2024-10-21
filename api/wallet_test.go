@@ -123,7 +123,7 @@ func TestGetWalletAPI(t *testing.T) {
 		},
 		{
 			name:     "InvalidID",
-			walletID: 0,
+			walletID: -1,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
 			},
