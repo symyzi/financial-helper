@@ -12,10 +12,6 @@ RETURNING *;
 SELECT * FROM budgets 
 WHERE id = $1;
 
--- name: GetBudgetsByWalletID :many
-SELECT * FROM budgets 
-WHERE wallet_id = $1 
-ORDER BY created_at DESC;
 
 -- name: UpdateBudget :one
 UPDATE budgets 
@@ -27,6 +23,7 @@ RETURNING *;
 DELETE FROM budgets
 WHERE id = $1;
 
--- name: GetBudgetByCategoryID :one
-SELECT * FROM budgets 
-WHERE category_id = $1;
+-- name: ListBudgets :many
+SELECT * FROM budgets
+LIMIT $1
+OFFSET $2;

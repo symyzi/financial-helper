@@ -10,6 +10,7 @@ CREATE TABLE "users" (
 CREATE TABLE "categories" (
   "id" bigserial PRIMARY KEY,
   "name" varchar UNIQUE NOT NULL,
+  "owner" varchar NOT NULL,
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
@@ -17,9 +18,8 @@ CREATE TABLE "expenses" (
   "id" bigserial PRIMARY KEY,
   "wallet_id" bigint NOT NULL,
   "amount" bigint NOT NULL,
-  "expense_description" varchar,
+  "expense_description" varchar NOT NULL,
   "category_id" bigint NOT NULL,
-  "expense_date" date NOT NULL,
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
@@ -39,13 +39,11 @@ CREATE TABLE "wallets" (
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
+CREATE INDEX ON "categories" ("owner");
+
 CREATE INDEX ON "expenses" ("wallet_id");
 
 CREATE INDEX ON "expenses" ("category_id");
-
-CREATE INDEX ON "expenses" ("expense_date");
-
-CREATE INDEX ON "expenses" ("wallet_id", "expense_date");
 
 CREATE INDEX ON "budgets" ("wallet_id");
 
@@ -58,6 +56,8 @@ CREATE INDEX ON "wallets" ("owner");
 COMMENT ON COLUMN "expenses"."amount" IS 'must be positive';
 
 COMMENT ON COLUMN "budgets"."amount" IS 'must be positive';
+
+ALTER TABLE "categories" ADD FOREIGN KEY ("owner") REFERENCES "users" ("username");
 
 ALTER TABLE "expenses" ADD FOREIGN KEY ("wallet_id") REFERENCES "wallets" ("id");
 

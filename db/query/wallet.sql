@@ -22,7 +22,7 @@ OFFSET $3;
 
 -- name: DeleteWallet :exec
 DELETE FROM wallets
-WHERE id = $1;
+WHERE id = $1 AND owner = $2;
 
 
 

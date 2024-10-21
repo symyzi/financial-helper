@@ -5,7 +5,6 @@
 package db
 
 import (
-	"database/sql"
 	"time"
 )
 
@@ -21,6 +20,7 @@ type Budget struct {
 type Category struct {
 	ID        int64     `json:"id"`
 	Name      string    `json:"name"`
+	Owner     string    `json:"owner"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -28,11 +28,10 @@ type Expense struct {
 	ID       int64 `json:"id"`
 	WalletID int64 `json:"wallet_id"`
 	// must be positive
-	Amount             int64          `json:"amount"`
-	ExpenseDescription sql.NullString `json:"expense_description"`
-	CategoryID         int64          `json:"category_id"`
-	ExpenseDate        time.Time      `json:"expense_date"`
-	CreatedAt          time.Time      `json:"created_at"`
+	Amount             int64     `json:"amount"`
+	ExpenseDescription string    `json:"expense_description"`
+	CategoryID         int64     `json:"category_id"`
+	CreatedAt          time.Time `json:"created_at"`
 }
 
 type User struct {
