@@ -43,6 +43,11 @@ func (server *Server) setupRouter() {
 	authRoutes.GET("/wallets/:id", server.getWallet)
 	authRoutes.DELETE("/wallets/:id", server.deleteWallet)
 
+	authRoutes.POST("/categories", server.createCategory)
+	authRoutes.GET("/categories/:id", server.getCategory)
+	authRoutes.GET("/categories", server.listCategories)
+	authRoutes.DELETE("/categories/:id", server.deleteCategory)
+
 	walletRoutes := authRoutes.Group("/wallets/:id")
 
 	walletRoutes.POST("/expenses", server.createExpense)

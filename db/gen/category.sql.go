@@ -11,17 +11,28 @@ import (
 
 const createCategory = `-- name: CreateCategory :one
 INSERT INTO categories (
-  name
+  name,
+  owner
 ) VALUES (
-  $1
+  $1, $2
 )
-RETURNING id, name, created_at
+RETURNING id, name, owner, created_at
 `
 
-func (q *Queries) CreateCategory(ctx context.Context, name string) (Category, error) {
-	row := q.queryRow(ctx, q.createCategoryStmt, createCategory, name)
+type CreateCategoryParams struct {
+	Name  string `json:"name"`
+	Owner string `json:"owner"`
+}
+
+func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
+	row := q.queryRow(ctx, q.createCategoryStmt, createCategory, arg.Name, arg.Owner)
 	var i Category
-	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Owner,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
@@ -36,11 +47,12 @@ func (q *Queries) DeleteCategory(ctx context.Context, id int64) error {
 }
 
 const getAllCategories = `-- name: GetAllCategories :many
-SELECT id, name, created_at FROM categories
+SELECT id, name, owner, created_at FROM categories
+WHERE owner = $1
 `
 
-func (q *Queries) GetAllCategories(ctx context.Context) ([]Category, error) {
-	rows, err := q.query(ctx, q.getAllCategoriesStmt, getAllCategories)
+func (q *Queries) GetAllCategories(ctx context.Context, owner string) ([]Category, error) {
+	rows, err := q.query(ctx, q.getAllCategoriesStmt, getAllCategories, owner)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +60,12 @@ func (q *Queries) GetAllCategories(ctx context.Context) ([]Category, error) {
 	items := []Category{}
 	for rows.Next() {
 		var i Category
-		if err := rows.Scan(&i.ID, &i.Name, &i.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Owner,
+			&i.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -63,14 +80,19 @@ func (q *Queries) GetAllCategories(ctx context.Context) ([]Category, error) {
 }
 
 const getCategoryByID = `-- name: GetCategoryByID :one
-SELECT id, name, created_at FROM categories 
+SELECT id, name, owner, created_at FROM categories 
 WHERE id = $1
 `
 
 func (q *Queries) GetCategoryByID(ctx context.Context, id int64) (Category, error) {
 	row := q.queryRow(ctx, q.getCategoryByIDStmt, getCategoryByID, id)
 	var i Category
-	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Owner,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
@@ -78,7 +100,7 @@ const updateCategory = `-- name: UpdateCategory :one
 UPDATE categories 
 SET name = $2 
 WHERE id = $1
-RETURNING id, name, created_at
+RETURNING id, name, owner, created_at
 `
 
 type UpdateCategoryParams struct {
@@ -89,6 +111,11 @@ type UpdateCategoryParams struct {
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
 	row := q.queryRow(ctx, q.updateCategoryStmt, updateCategory, arg.ID, arg.Name)
 	var i Category
-	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Owner,
+		&i.CreatedAt,
+	)
 	return i, err
 }

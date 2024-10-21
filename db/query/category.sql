@@ -1,8 +1,9 @@
 -- name: CreateCategory :one
 INSERT INTO categories (
-  name
+  name,
+  owner
 ) VALUES (
-  $1
+  $1, $2
 )
 RETURNING *;
 
@@ -11,7 +12,9 @@ SELECT * FROM categories
 WHERE id = $1;
 
 -- name: GetAllCategories :many
-SELECT * FROM categories;
+SELECT * FROM categories
+WHERE owner = $1;
+
 
 -- name: UpdateCategory :one
 UPDATE categories 

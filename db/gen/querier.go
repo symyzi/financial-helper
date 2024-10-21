@@ -10,7 +10,7 @@ import (
 
 type Querier interface {
 	CreateBudget(ctx context.Context, arg CreateBudgetParams) (Budget, error)
-	CreateCategory(ctx context.Context, name string) (Category, error)
+	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
 	CreateExpense(ctx context.Context, arg CreateExpenseParams) (Expense, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateWallet(ctx context.Context, arg CreateWalletParams) (Wallet, error)
@@ -18,7 +18,7 @@ type Querier interface {
 	DeleteCategory(ctx context.Context, id int64) error
 	DeleteExpense(ctx context.Context, id int64) error
 	DeleteWallet(ctx context.Context, arg DeleteWalletParams) error
-	GetAllCategories(ctx context.Context) ([]Category, error)
+	GetAllCategories(ctx context.Context, owner string) ([]Category, error)
 	GetBudgetByID(ctx context.Context, id int64) (Budget, error)
 	GetCategoryByID(ctx context.Context, id int64) (Category, error)
 	GetExpense(ctx context.Context, id int64) (Expense, error)

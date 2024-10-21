@@ -23,7 +23,7 @@ import (
 func TestCreateBudgetAPI(t *testing.T) {
 	user, _ := randomUser(t)
 	wallet := RandomWallet(user.Username)
-	category := RandomCategory()
+	category := RandomCategory(user.Username)
 	budget := RandomBudget(wallet.ID, category.ID)
 
 	testCases := []struct {
@@ -204,7 +204,7 @@ func TestCreateBudgetAPI(t *testing.T) {
 func TestGetBudgetByID(t *testing.T) {
 	user, _ := randomUser(t)
 	wallet := RandomWallet(user.Username)
-	category := RandomCategory()
+	category := RandomCategory(user.Username)
 	budget := RandomBudget(wallet.ID, category.ID)
 
 	testCases := []struct {
@@ -342,7 +342,7 @@ func TestGetBudgetByID(t *testing.T) {
 func TestListBudgetsAPI(t *testing.T) {
 	user, _ := randomUser(t)
 	wallet := RandomWallet(user.Username)
-	category := RandomCategory()
+	category := RandomCategory(user.Username)
 	n := 5
 
 	budgets := make([]db.Budget, n)
@@ -516,7 +516,7 @@ func TestListBudgetsAPI(t *testing.T) {
 func TestDeleteBudgetAPI(t *testing.T) {
 	user, _ := randomUser(t)
 	wallet := RandomWallet(user.Username)
-	budget := RandomBudget(wallet.ID, RandomCategory().ID)
+	budget := RandomBudget(wallet.ID, RandomCategory(user.Username).ID)
 
 	testCases := []struct {
 		name          string

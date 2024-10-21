@@ -20,6 +20,7 @@ type Budget struct {
 type Category struct {
 	ID        int64     `json:"id"`
 	Name      string    `json:"name"`
+	Owner     string    `json:"owner"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

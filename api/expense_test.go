@@ -23,7 +23,7 @@ import (
 func TestCreateExpenseAPI(t *testing.T) {
 	user, _ := randomUser(t)
 	wallet := RandomWallet(user.Username)
-	category := RandomCategory()
+	category := RandomCategory(user.Username)
 	expense := RandomExpense(wallet.ID, category.ID)
 
 	testCases := []struct {
@@ -212,7 +212,7 @@ func TestCreateExpenseAPI(t *testing.T) {
 func TestGetExpenseByID(t *testing.T) {
 	user, _ := randomUser(t)
 	wallet := RandomWallet(user.Username)
-	category := RandomCategory()
+	category := RandomCategory(user.Username)
 	expense := RandomExpense(wallet.ID, category.ID)
 
 	testCases := []struct {
@@ -350,7 +350,7 @@ func TestGetExpenseByID(t *testing.T) {
 func TestListExpensesAPI(t *testing.T) {
 	user, _ := randomUser(t)
 	wallet := RandomWallet(user.Username)
-	category := RandomCategory()
+	category := RandomCategory(user.Username)
 	n := 5
 
 	expenses := make([]db.Expense, n)
@@ -524,7 +524,7 @@ func TestListExpensesAPI(t *testing.T) {
 func TestDeleteExpenseAPI(t *testing.T) {
 	user, _ := randomUser(t)
 	wallet := RandomWallet(user.Username)
-	expense := RandomExpense(wallet.ID, RandomCategory().ID)
+	expense := RandomExpense(wallet.ID, RandomCategory(user.Username).ID)
 
 	testCases := []struct {
 		name          string

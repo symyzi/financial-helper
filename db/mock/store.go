@@ -51,7 +51,7 @@ func (mr *MockStoreMockRecorder) CreateBudget(arg0, arg1 interface{}) *gomock.Ca
 }
 
 // CreateCategory mocks base method.
-func (m *MockStore) CreateCategory(arg0 context.Context, arg1 string) (db.Category, error) {
+func (m *MockStore) CreateCategory(arg0 context.Context, arg1 db.CreateCategoryParams) (db.Category, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateCategory", arg0, arg1)
 	ret0, _ := ret[0].(db.Category)
@@ -167,18 +167,18 @@ func (mr *MockStoreMockRecorder) DeleteWallet(arg0, arg1 interface{}) *gomock.Ca
 }
 
 // GetAllCategories mocks base method.
-func (m *MockStore) GetAllCategories(arg0 context.Context) ([]db.Category, error) {
+func (m *MockStore) GetAllCategories(arg0 context.Context, arg1 string) ([]db.Category, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAllCategories", arg0)
+	ret := m.ctrl.Call(m, "GetAllCategories", arg0, arg1)
 	ret0, _ := ret[0].([]db.Category)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAllCategories indicates an expected call of GetAllCategories.
-func (mr *MockStoreMockRecorder) GetAllCategories(arg0 interface{}) *gomock.Call {
+func (mr *MockStoreMockRecorder) GetAllCategories(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllCategories", reflect.TypeOf((*MockStore)(nil).GetAllCategories), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllCategories", reflect.TypeOf((*MockStore)(nil).GetAllCategories), arg0, arg1)
 }
 
 // GetBudgetByID mocks base method.

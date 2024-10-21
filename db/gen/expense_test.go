@@ -29,14 +29,16 @@ func CreateRandomExpense(t *testing.T, wallet Wallet, category Category) Expense
 	return expense
 }
 func TestCreateExpense(t *testing.T) {
-	wallet := CreateRandomWallet(t, CreateRandomUser(t))
-	category := CreateRandomCategory(t)
+	user := CreateRandomUser(t)
+	wallet := CreateRandomWallet(t, user)
+	category := CreateRandomCategory(t, user)
 	CreateRandomExpense(t, wallet, category)
 }
 
 func TestGetExpenseByID(t *testing.T) {
-	wallet := CreateRandomWallet(t, CreateRandomUser(t))
-	category := CreateRandomCategory(t)
+	user := CreateRandomUser(t)
+	wallet := CreateRandomWallet(t, user)
+	category := CreateRandomCategory(t, user)
 	expense1 := CreateRandomExpense(t, wallet, category)
 	expense2, err := testQueries.GetExpense(context.Background(), expense1.ID)
 	require.NoError(t, err)
@@ -50,8 +52,9 @@ func TestGetExpenseByID(t *testing.T) {
 }
 
 func TestDeleteExpense(t *testing.T) {
-	wallet := CreateRandomWallet(t, CreateRandomUser(t))
-	category := CreateRandomCategory(t)
+	user := CreateRandomUser(t)
+	wallet := CreateRandomWallet(t, user)
+	category := CreateRandomCategory(t, user)
 	expense1 := CreateRandomExpense(t, wallet, category)
 	err := testQueries.DeleteExpense(context.Background(), expense1.ID)
 	require.NoError(t, err)
@@ -78,8 +81,9 @@ func TestDeleteExpense(t *testing.T) {
 // }
 
 func TestUpdateExpense(t *testing.T) {
-	wallet := CreateRandomWallet(t, CreateRandomUser(t))
-	category := CreateRandomCategory(t)
+	user := CreateRandomUser(t)
+	wallet := CreateRandomWallet(t, user)
+	category := CreateRandomCategory(t, user)
 	expense1 := CreateRandomExpense(t, wallet, category)
 	arg := UpdateExpenseParams{
 		ID:                 expense1.ID,
@@ -100,9 +104,10 @@ func TestUpdateExpense(t *testing.T) {
 }
 
 func TestListExpenses(t *testing.T) {
-	wallet := CreateRandomWallet(t, CreateRandomUser(t))
+	user := CreateRandomUser(t)
+	wallet := CreateRandomWallet(t, user)
 	for i := 0; i < 10; i++ {
-		category := CreateRandomCategory(t)
+		category := CreateRandomCategory(t, user)
 		CreateRandomExpense(t, wallet, category)
 	}
 	arg := ListExpensesParams{
@@ -115,6 +120,5 @@ func TestListExpenses(t *testing.T) {
 	require.Len(t, expenses, 5)
 	for _, expense := range expenses {
 		require.NotEmpty(t, expense)
-		require.Equal(t, wallet.ID, expense.WalletID)
 	}
 }

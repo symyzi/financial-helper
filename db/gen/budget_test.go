@@ -26,14 +26,16 @@ func CreateRandomBudget(t *testing.T, wallet Wallet, category Category) Budget {
 	return budget
 }
 func TestCreateBudget(t *testing.T) {
-	wallet := CreateRandomWallet(t, CreateRandomUser(t))
-	category := CreateRandomCategory(t)
+	user := CreateRandomUser(t)
+	wallet := CreateRandomWallet(t, user)
+	category := CreateRandomCategory(t, user)
 	CreateRandomBudget(t, wallet, category)
 }
 
 func TestGetBudgetByID(t *testing.T) {
-	wallet := CreateRandomWallet(t, CreateRandomUser(t))
-	category := CreateRandomCategory(t)
+	user := CreateRandomUser(t)
+	wallet := CreateRandomWallet(t, user)
+	category := CreateRandomCategory(t, user)
 	budget1 := CreateRandomBudget(t, wallet, category)
 	budget2, err := testQueries.GetBudgetByID(context.Background(), budget1.ID)
 	require.NoError(t, err)
@@ -47,8 +49,9 @@ func TestGetBudgetByID(t *testing.T) {
 }
 
 func TestListBudgets(t *testing.T) {
-	wallet := CreateRandomWallet(t, CreateRandomUser(t))
-	category := CreateRandomCategory(t)
+	user := CreateRandomUser(t)
+	wallet := CreateRandomWallet(t, user)
+	category := CreateRandomCategory(t, user)
 	for i := 0; i < 10; i++ {
 		CreateRandomBudget(t, wallet, category)
 	}
@@ -65,8 +68,9 @@ func TestListBudgets(t *testing.T) {
 }
 
 func TestUpdateBudget(t *testing.T) {
-	wallet := CreateRandomWallet(t, CreateRandomUser(t))
-	category := CreateRandomCategory(t)
+	user := CreateRandomUser(t)
+	wallet := CreateRandomWallet(t, user)
+	category := CreateRandomCategory(t, user)
 	budget1 := CreateRandomBudget(t, wallet, category)
 	arg := UpdateBudgetParams{
 		ID:         budget1.ID,
@@ -84,8 +88,9 @@ func TestUpdateBudget(t *testing.T) {
 }
 
 func TestDeleteBudget(t *testing.T) {
-	wallet := CreateRandomWallet(t, CreateRandomUser(t))
-	category := CreateRandomCategory(t)
+	user := CreateRandomUser(t)
+	wallet := CreateRandomWallet(t, user)
+	category := CreateRandomCategory(t, user)
 	budget1 := CreateRandomBudget(t, wallet, category)
 	err := testQueries.DeleteBudget(context.Background(), budget1.ID)
 	require.NoError(t, err)
